@@ -34,7 +34,8 @@ public final class JumpCounterHandler {
         int nextTarget = getNextTarget(data);
 
         currentJumps++;
-        if (currentJumps >= nextTarget) {
+        boolean rewardEarned = currentJumps >= nextTarget;
+        if (rewardEarned) {
             currentJumps = 0;
             nextTarget = Math.min(nextTarget + TARGET_INCREMENT, MAX_TARGET);
             data.putInt(NEXT_TARGET_TAG, nextTarget);
@@ -46,6 +47,9 @@ public final class JumpCounterHandler {
 
         data.putInt(CURRENT_JUMPS_TAG, currentJumps);
         JumpNetwork.sendProgress(player, currentJumps, nextTarget);
+        if (rewardEarned) {
+            JumpNetwork.sendRewardReady(player);
+        }
     }
 
     @SubscribeEvent
