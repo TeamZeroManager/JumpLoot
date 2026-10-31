@@ -39,7 +39,7 @@ minecraft {
         }
 
         server {
-            args '-- nogui'
+            args '--nogui'
         }
 
         gameTestServer {
