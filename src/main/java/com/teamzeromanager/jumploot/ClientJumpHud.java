@@ -51,6 +51,13 @@ public final class ClientJumpHud {
         while (editKey.consumeClick()) {
             editMode = !editMode;
             dragging = false;
+            if (editMode) {
+                // Free the cursor so the player can move and drag the HUD.
+                minecraft.mouseHandler.releaseMouse();
+            } else {
+                // Restore normal first-person mouse capture when editing ends.
+                minecraft.mouseHandler.grabMouse();
+            }
             if (minecraft.player != null) {
                 minecraft.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
                         editMode ? "Edición del HUD: arrastra la barra. Pulsa H para terminar." : "Edición del HUD finalizada."
