@@ -75,6 +75,18 @@ public final class ClientJumpHud {
             double mouseX = minecraft.mouseHandler.xpos() * screenWidth / minecraft.getWindow().getScreenWidth();
             double mouseY = minecraft.mouseHandler.ypos() * screenHeight / minecraft.getWindow().getScreenHeight();
             boolean leftDown = GLFW.glfwGetMouseButton(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            boolean rightDown = GLFW.glfwGetMouseButton(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            if (rightDown) {
+                ClientHudConfig.RIGHT_OFFSET.set(12);
+                ClientHudConfig.BOTTOM_OFFSET.set(12);
+                ClientHudConfig.WIDTH.set(142);
+                ClientHudConfig.SCALE.set(1.0D);
+                width = 142;
+                height = BASE_HEIGHT;
+                x = screenWidth - width - 12;
+                y = screenHeight - height - 12;
+                dragging = false;
+            }
             if (leftDown && !dragging && mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
                 dragging = true;
             }
@@ -91,7 +103,7 @@ public final class ClientJumpHud {
 
         float targetProgress = Math.min(1.0F, (float) currentJumps / targetJumps);
         animatedProgress += (targetProgress - animatedProgress) * 0.22F;
-        int barWidth = width - (int) (16 * scale);
+        int barWidth = ClientHudConfig.WIDTH.get() - 16;
         int fillWidth = Math.round(barWidth * animatedProgress);
         int remaining = Math.max(0, targetJumps - currentJumps);
         int textColor = currentJumps >= targetJumps - 5 ? 0xFFFFC34D : 0xFFFFFFFF;
