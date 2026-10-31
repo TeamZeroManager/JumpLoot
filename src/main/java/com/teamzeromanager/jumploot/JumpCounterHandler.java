@@ -48,7 +48,7 @@ public final class JumpCounterHandler {
         data.putInt(CURRENT_JUMPS_TAG, currentJumps);
         JumpNetwork.sendProgress(player, currentJumps, nextTarget);
         if (rewardEarned) {
-            JumpNetwork.sendRewardReady(player);
+            LootRewardService.award(player);
         }
     }
 
