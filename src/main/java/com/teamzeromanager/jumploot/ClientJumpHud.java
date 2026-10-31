@@ -1,17 +1,28 @@
 package com.teamzeromanager.jumploot;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.api.distmarker.Dist;
+import org.lwjgl.glfw.GLFW;
 
 @Mod.EventBusSubscriber(modid = JumpLoot.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientJumpHud {
+    private static final int BASE_HEIGHT = 43;
     private static int currentJumps;
     private static int targetJumps = 30;
+    private static float animatedProgress;
+    private static boolean editMode;
+    private static boolean dragging;
+    private static KeyMapping editKey;
 
     private ClientJumpHud() {
     }
@@ -26,31 +37,80 @@ public final class ClientJumpHud {
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "jump_progress", ClientJumpHud::render);
     }
 
+    @SubscribeEvent
+    public static void registerKeys(RegisterKeyMappingsEvent event) {
+        editKey = new KeyMapping("key.jumploot.edit_hud", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H,
+                "key.categories.jumploot");
+        event.register(editKey);
+        MinecraftForge.EVENT_BUS.register(ClientJumpHud.class);
+    }
+
+    @SubscribeEvent
+    public static void clientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || editKey == null) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        while (editKey.consumeClick()) {
+            editMode = !editMode;
+            dragging = false;
+            if (minecraft.player != null) {
+                minecraft.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        editMode ? "Edición del HUD: arrastra la barra. Pulsa H para terminar." : "Edición del HUD finalizada."
+                ), true);
+            }
+        }
+    }
+
     private static void render(net.minecraftforge.client.gui.overlay.ForgeGui gui, GuiGraphics graphics,
                                float partialTick, int screenWidth, int screenHeight) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || minecraft.options.hideGui) {
-            return;
+        if (minecraft.player == null || minecraft.options.hideGui || !ClientHudConfig.ENABLED.get()) return;
+
+        double scale = ClientHudConfig.SCALE.get();
+        int width = (int) Math.round(ClientHudConfig.WIDTH.get() * scale);
+        int height = (int) Math.round(BASE_HEIGHT * scale);
+        int x = screenWidth - (int) Math.round(ClientHudConfig.RIGHT_OFFSET.get() * scale) - width;
+        int y = screenHeight - (int) Math.round(ClientHudConfig.BOTTOM_OFFSET.get() * scale) - height;
+
+        if (editMode) {
+            double mouseX = minecraft.mouseHandler.xpos() * screenWidth / minecraft.getWindow().getScreenWidth();
+            double mouseY = minecraft.mouseHandler.ypos() * screenHeight / minecraft.getWindow().getScreenHeight();
+            boolean leftDown = GLFW.glfwGetMouseButton(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            if (leftDown && !dragging && mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
+                dragging = true;
+            }
+            if (!leftDown) dragging = false;
+            if (dragging) {
+                int newRight = Math.max(0, screenWidth - (int) mouseX - width);
+                int newBottom = Math.max(0, screenHeight - (int) mouseY - height);
+                ClientHudConfig.RIGHT_OFFSET.set((int) Math.round(newRight / scale));
+                ClientHudConfig.BOTTOM_OFFSET.set((int) Math.round(newBottom / scale));
+                x = screenWidth - (int) Math.round(ClientHudConfig.RIGHT_OFFSET.get() * scale) - width;
+                y = screenHeight - (int) Math.round(ClientHudConfig.BOTTOM_OFFSET.get() * scale) - height;
+            }
         }
 
-        int width = 142;
-        int height = 34;
-        int x = screenWidth - width - 12;
-        int y = screenHeight - height - 12;
+        float targetProgress = Math.min(1.0F, (float) currentJumps / targetJumps);
+        animatedProgress += (targetProgress - animatedProgress) * 0.22F;
+        int barWidth = width - (int) (16 * scale);
+        int fillWidth = Math.round(barWidth * animatedProgress);
+        int remaining = Math.max(0, targetJumps - currentJumps);
+        int textColor = currentJumps >= targetJumps - 5 ? 0xFFFFC34D : 0xFFFFFFFF;
 
-        float progress = Math.min(1.0F, (float) currentJumps / (float) targetJumps);
-        int barWidth = width - 12;
-        int filledWidth = Math.round(barWidth * progress);
-
-        graphics.fill(x, y, x + width, y + height, 0xB9101018);
-        graphics.fill(x, y, x + width, y + 2, 0xFFE0B84F);
-        graphics.drawString(minecraft.font, "JUMP LOOT", x + 6, y + 5, 0xFFFFD76A, false);
-        graphics.drawString(minecraft.font, currentJumps + " / " + targetJumps + " saltos",
-                x + 6, y + 16, 0xFFFFFFFF, false);
-        graphics.fill(x + 6, y + 27, x + 6 + barWidth, y + 31, 0xFF39343A);
-        if (filledWidth > 0) {
-            int fillColor = currentJumps >= targetJumps - 5 ? 0xFFFFC34D : 0xFFB47AE8;
-            graphics.fill(x + 6, y + 27, x + 6 + filledWidth, y + 31, fillColor);
-        }
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale((float) scale, (float) scale, 1.0F);
+        int logicalWidth = ClientHudConfig.WIDTH.get();
+        graphics.fill(0, 0, logicalWidth, BASE_HEIGHT, 0xD9101018);
+        graphics.fill(0, 0, logicalWidth, 3, 0xFFE0B84F);
+        graphics.drawString(minecraft.font, editMode ? "JUMP LOOT - EDITANDO" : "JUMP LOOT", 8, 7, 0xFFFFD76A, false);
+        String progressText = currentJumps + " / " + targetJumps + " saltos";
+        if (ClientHudConfig.SHOW_PERCENT.get()) progressText += "  " + Math.round(targetProgress * 100) + "%";
+        graphics.drawString(minecraft.font, progressText, 8, 19, textColor, false);
+        graphics.fill(8, 31, logicalWidth - 8, 37, 0xFF39343A);
+        if (fillWidth > 0) graphics.fill(8, 31, 8 + fillWidth, 37,
+                currentJumps >= targetJumps - 5 ? 0xFFFFC34D : 0xFFB47AE8);
+        if (remaining == 1) graphics.drawString(minecraft.font, "¡Un salto más!", 8, 39, 0xFFFFD76A, false);
+        else if (editMode) graphics.drawString(minecraft.font, "Arrastra para mover", 8, 39, 0xFFBEB6C8, false);
+        graphics.pose().popPose();
     }
 }
