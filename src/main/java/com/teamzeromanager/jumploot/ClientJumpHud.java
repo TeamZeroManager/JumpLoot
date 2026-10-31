@@ -42,10 +42,9 @@ public final class ClientJumpHud {
         editKey = new KeyMapping("key.jumploot.edit_hud", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H,
                 "key.categories.jumploot");
         event.register(editKey);
-        MinecraftForge.EVENT_BUS.register(ClientJumpHud.class);
+        MinecraftForge.EVENT_BUS.addListener(ClientJumpHud::clientTick);
     }
 
-    @SubscribeEvent
     public static void clientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END || editKey == null) return;
         Minecraft minecraft = Minecraft.getInstance();
