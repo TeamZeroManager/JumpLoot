@@ -10,6 +10,7 @@ public final class JumpLoot {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public JumpLoot() {
+        JumpNetwork.register();
         LOGGER.info("Jump Loot is loading.");
     }
 }
