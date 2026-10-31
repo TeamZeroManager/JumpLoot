@@ -9,10 +9,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * Tracks normal player jumps and the progression toward Jump Loot rewards.
- *
- * Progress is stored in the player's persistent NBT data so it survives
- * leaving and rejoining a world.
+ * Tracks player jump progression and synchronizes it with the client HUD.
  */
 @Mod.EventBusSubscriber(modid = JumpLoot.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class JumpCounterHandler {
@@ -41,19 +38,14 @@ public final class JumpCounterHandler {
             currentJumps = 0;
             nextTarget = Math.min(nextTarget + TARGET_INCREMENT, MAX_TARGET);
             data.putInt(NEXT_TARGET_TAG, nextTarget);
-
             player.displayClientMessage(
                     Component.literal("¡Recompensa conseguida! Próxima meta: " + nextTarget + " saltos."),
                     false
             );
-        } else {
-            player.displayClientMessage(
-                    Component.literal("Saltos: " + currentJumps + " / " + nextTarget),
-                    true
-            );
         }
 
         data.putInt(CURRENT_JUMPS_TAG, currentJumps);
+        JumpNetwork.sendProgress(player, currentJumps, nextTarget);
     }
 
     @SubscribeEvent
@@ -61,23 +53,32 @@ public final class JumpCounterHandler {
         CompoundTag oldData = event.getOriginal().getPersistentData();
         CompoundTag newData = event.getEntity().getPersistentData();
 
-        int nextTarget = getNextTarget(oldData);
-        newData.putInt(NEXT_TARGET_TAG, nextTarget);
-
-        // Death removes only the unfinished progress, never the earned progression.
+        newData.putInt(NEXT_TARGET_TAG, getNextTarget(oldData));
         int currentJumps = event.isWasDeath() ? 0 : Math.max(0, oldData.getInt(CURRENT_JUMPS_TAG));
         newData.putInt(CURRENT_JUMPS_TAG, currentJumps);
     }
 
-    private static int getNextTarget(CompoundTag data) {
-        int target = data.contains(NEXT_TARGET_TAG)
-                ? data.getInt(NEXT_TARGET_TAG)
-                : FIRST_TARGET;
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            CompoundTag data = player.getPersistentData();
+            JumpNetwork.sendProgress(player, Math.max(0, data.getInt(CURRENT_JUMPS_TAG)), getNextTarget(data));
+        }
+    }
 
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            CompoundTag data = player.getPersistentData();
+            JumpNetwork.sendProgress(player, Math.max(0, data.getInt(CURRENT_JUMPS_TAG)), getNextTarget(data));
+        }
+    }
+
+    private static int getNextTarget(CompoundTag data) {
+        int target = data.contains(NEXT_TARGET_TAG) ? data.getInt(NEXT_TARGET_TAG) : FIRST_TARGET;
         if (target < FIRST_TARGET) {
             return FIRST_TARGET;
         }
-
         return Math.min(target, MAX_TARGET);
     }
 }
