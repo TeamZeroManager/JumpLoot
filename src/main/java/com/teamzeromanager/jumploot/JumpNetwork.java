@@ -25,9 +25,18 @@ public final class JumpNetwork {
                 .decoder(JumpProgressPacket::decode)
                 .consumerMainThread(JumpProgressPacket::handle)
                 .add();
+        CHANNEL.messageBuilder(RewardReadyPacket.class, packetId++)
+                .encoder(RewardReadyPacket::encode)
+                .decoder(RewardReadyPacket::decode)
+                .consumerMainThread(RewardReadyPacket::handle)
+                .add();
     }
 
     public static void sendProgress(net.minecraft.server.level.ServerPlayer player, int current, int target) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new JumpProgressPacket(current, target));
+    }
+
+    public static void sendRewardReady(net.minecraft.server.level.ServerPlayer player) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardReadyPacket());
     }
 }
