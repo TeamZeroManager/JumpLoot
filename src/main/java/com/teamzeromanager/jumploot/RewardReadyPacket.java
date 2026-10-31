@@ -1,28 +1,41 @@
 package com.teamzeromanager.jumploot;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-/**
- * Notifies the client that the player has earned a roulette reward.
- * The packet is reserved for opening the reward flow; the server currently
- * displays the progression message to avoid duplicate client notifications.
- */
+/** Sends the server-selected reward to the client. */
 public final class RewardReadyPacket {
-    public static void encode(RewardReadyPacket packet, net.minecraft.network.FriendlyByteBuf buffer) {
-        // No payload is required for this notification.
+    private final LootRarity rarity;
+    private final ItemStack item;
+
+    public RewardReadyPacket(LootRarity rarity, ItemStack item) {
+        this.rarity = rarity;
+        this.item = item.copy();
     }
 
-    public static RewardReadyPacket decode(net.minecraft.network.FriendlyByteBuf buffer) {
-        return new RewardReadyPacket();
+    public static void encode(RewardReadyPacket packet, FriendlyByteBuf buffer) {
+        buffer.writeEnum(packet.rarity);
+        buffer.writeNbt(packet.item.save(new CompoundTag()));
+    }
+
+    public static RewardReadyPacket decode(FriendlyByteBuf buffer) {
+        LootRarity rarity = buffer.readEnum(LootRarity.class);
+        CompoundTag tag = buffer.readNbt();
+        return new RewardReadyPacket(rarity, tag == null ? ItemStack.EMPTY : ItemStack.of(tag));
     }
 
     public static void handle(RewardReadyPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            // The reward UI will be opened here when the roulette is implemented.
-        });
+        context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                () -> () -> Minecraft.getInstance().setScreen(
+                        new LootRouletteScreen(packet.rarity, packet.item))));
         context.setPacketHandled(true);
     }
 }
