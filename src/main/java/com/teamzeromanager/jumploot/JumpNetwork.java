@@ -36,7 +36,7 @@ public final class JumpNetwork {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new JumpProgressPacket(current, target));
     }
 
-    public static void sendRewardReady(net.minecraft.server.level.ServerPlayer player) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardReadyPacket());
+    public static void sendRewardReady(net.minecraft.server.level.ServerPlayer player, LootRarity rarity, net.minecraft.world.item.ItemStack item) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardReadyPacket(rarity, item));
     }
 }
