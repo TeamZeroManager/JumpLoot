@@ -71,7 +71,10 @@ public final class LootItemCatalog {
                 continue;
             }
 
-            LootRarity rarity = RARITY_OVERRIDES.getOrDefault(id.toString(), fromItemRarity(stack.getRarity()));
+            LootRarity rarity = RARITY_OVERRIDES.get(id.toString());
+            if (rarity == null) {
+                rarity = fromItemRarity(stack.getRarity());
+            }
             catalog.items.get(rarity).add(stack);
         }
 
@@ -85,12 +88,18 @@ public final class LootItemCatalog {
     }
 
     private static LootRarity fromItemRarity(Rarity rarity) {
-        return switch (rarity) {
-            case UNCOMMON -> LootRarity.UNCOMMON;
-            case RARE -> LootRarity.RARE;
-            case EPIC -> LootRarity.EPIC;
-            case COMMON -> LootRarity.COMMON;
-        };
+        // Avoid enum switch bytecode here: large modpacks may extend Minecraft's
+        // rarity enum, and an unknown enum constant can trigger IncompatibleClassChangeError.
+        if (rarity == Rarity.UNCOMMON) {
+            return LootRarity.UNCOMMON;
+        }
+        if (rarity == Rarity.RARE) {
+            return LootRarity.RARE;
+        }
+        if (rarity == Rarity.EPIC) {
+            return LootRarity.EPIC;
+        }
+        return LootRarity.COMMON;
     }
 
     private static Map<String, LootRarity> createOverrides() {
