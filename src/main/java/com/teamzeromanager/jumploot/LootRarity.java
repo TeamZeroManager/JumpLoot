@@ -13,8 +13,8 @@ import java.util.Map;
  * Empty tiers are omitted from the available collection before selection.
  */
 public enum LootRarity {
-    COMMON(60, 0xA0A0A0),
-    UNCOMMON(25, 0x55FF55),
+    COMMON(50, 0xA0A0A0),
+    UNCOMMON(35, 0x55FF55),
     RARE(10, 0x5555FF),
     EPIC(4, 0xAA00AA),
     LEGENDARY(1, 0xFFAA00);
