@@ -1,9 +1,13 @@
 package com.teamzeromanager.jumploot;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
+
+import java.util.List;
 
 public final class JumpNetwork {
     private static final String PROTOCOL = "1";
@@ -30,13 +34,44 @@ public final class JumpNetwork {
                 .decoder(RewardReadyPacket::decode)
                 .consumerMainThread(RewardReadyPacket::handle)
                 .add();
+        CHANNEL.messageBuilder(LootStorageRequestPacket.class, packetId++)
+                .encoder(LootStorageRequestPacket::encode)
+                .decoder(LootStorageRequestPacket::decode)
+                .consumerMainThread(LootStorageRequestPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(LootStorageSyncPacket.class, packetId++)
+                .encoder(LootStorageSyncPacket::encode)
+                .decoder(LootStorageSyncPacket::decode)
+                .consumerMainThread(LootStorageSyncPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(LootStorageActionPacket.class, packetId++)
+                .encoder(LootStorageActionPacket::encode)
+                .decoder(LootStorageActionPacket::decode)
+                .consumerMainThread(LootStorageActionPacket::handle)
+                .add();
     }
 
-    public static void sendProgress(net.minecraft.server.level.ServerPlayer player, int current, int target) {
+    public static void sendProgress(ServerPlayer player, int current, int target) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new JumpProgressPacket(current, target));
     }
 
-    public static void sendRewardReady(net.minecraft.server.level.ServerPlayer player, LootRarity rarity, net.minecraft.world.item.ItemStack item) {
+    public static void sendRewardReady(ServerPlayer player, LootRarity rarity, ItemStack item) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardReadyPacket(rarity, item));
+    }
+
+    public static void requestStorage() {
+        CHANNEL.sendToServer(new LootStorageRequestPacket());
+    }
+
+    public static void sendStorage(ServerPlayer player, List<ItemStack> items) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new LootStorageSyncPacket(items));
+    }
+
+    public static void claimStorage(int index) {
+        CHANNEL.sendToServer(new LootStorageActionPacket(index, LootStorageActionPacket.Action.CLAIM));
+    }
+
+    public static void discardStorage(int index) {
+        CHANNEL.sendToServer(new LootStorageActionPacket(index, LootStorageActionPacket.Action.DISCARD));
     }
 }
