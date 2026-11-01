@@ -3,60 +3,160 @@ package com.teamzeromanager.jumploot;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Two-stage client presentation. The server has already selected and stored
+ * the reward; this screen only animates toward that authoritative result.
+ */
 public final class LootRouletteScreen extends Screen {
-    private static final int RARITY_REVEAL_TICKS = 55;
+    private enum Phase { RARITY, ITEM, RESULT }
+
+    private static final int RARITY_DURATION = 100;
+    private static final int ITEM_DURATION = 150;
+    private static final int SLOT_WIDTH = 112;
+
     private final LootRarity rarity;
     private final ItemStack reward;
-    private int ticks;
+    private final List<LootRarity> rarityReel = new ArrayList<>();
+    private final List<ItemStack> itemReel = new ArrayList<>();
+
+    private Phase phase = Phase.RARITY;
+    private int phaseTick;
+    private int rarityWinner;
+    private int itemWinner;
+    private float rarityOffset;
+    private float itemOffset;
 
     public LootRouletteScreen(LootRarity rarity, ItemStack reward) {
         super(Component.literal("Jump Loot"));
         this.rarity = rarity;
         this.reward = reward.copy();
+        buildReels();
+    }
+
+    private void buildReels() {
+        RandomSource random = RandomSource.create();
+        LootRarity[] tiers = LootRarity.values();
+        for (int i = 0; i < 31; i++) {
+            rarityReel.add(tiers[random.nextInt(tiers.length)]);
+        }
+        rarityWinner = 25;
+        rarityReel.set(rarityWinner, rarity);
+
+        // Use the client registry only for decorative passing items. The final
+        // item is always the exact stack selected and stored by the server.
+        List<ItemStack> candidates = new ArrayList<>();
+        try {
+            candidates.addAll(LootItemCatalog.build().getItems(rarity));
+        } catch (RuntimeException ignored) {
+            // A missing client-side candidate list must not prevent the reward screen.
+        }
+        if (candidates.isEmpty()) candidates.add(reward.copy());
+
+        for (int i = 0; i < 41; i++) {
+            itemReel.add(candidates.get(random.nextInt(candidates.size())).copy());
+        }
+        itemWinner = 33;
+        itemReel.set(itemWinner, reward.copy());
     }
 
     @Override
-    public void tick() { ticks++; }
+    public void tick() {
+        super.tick();
+        phaseTick++;
+        if (phase == Phase.RARITY) {
+            float progress = Math.min(1.0F, phaseTick / (float) RARITY_DURATION);
+            rarityOffset = easedTravel(progress, rarityWinner * SLOT_WIDTH);
+            if (phaseTick >= RARITY_DURATION) {
+                phase = Phase.ITEM;
+                phaseTick = 0;
+            }
+        } else if (phase == Phase.ITEM) {
+            float progress = Math.min(1.0F, phaseTick / (float) ITEM_DURATION);
+            itemOffset = easedTravel(progress, itemWinner * SLOT_WIDTH);
+            if (phaseTick >= ITEM_DURATION) {
+                phase = Phase.RESULT;
+            }
+        }
+    }
+
+    private float easedTravel(float progress, float distance) {
+        // Cubic ease-out: fast start, smooth deceleration, exact final position.
+        float inverse = 1.0F - progress;
+        return distance * (1.0F - inverse * inverse * inverse);
+    }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
         int centerX = this.width / 2;
         int centerY = this.height / 2;
+        graphics.fill(centerX - 220, centerY - 112, centerX + 220, centerY + 116, 0xE91A1720);
+        graphics.fill(centerX - 218, centerY - 110, centerX + 218, centerY + 114, 0xE92A2533);
+        graphics.drawCenteredString(this.font, "JUMP LOOT", centerX, centerY - 96, 0xFFFFD45A);
 
-        graphics.fill(centerX - 150, centerY - 95, centerX + 150, centerY + 100, 0xE91A1720);
-        graphics.fill(centerX - 148, centerY - 93, centerX + 148, centerY + 98, 0xE92A2533);
-        graphics.drawCenteredString(this.font, Component.literal("JUMP LOOT"), centerX, centerY - 78, 0xFFFFD45A);
-
-        if (ticks < RARITY_REVEAL_TICKS) {
-            int pulse = (ticks / 5) % 2 == 0 ? 0xFFFFFFFF : rarity.getColor();
-            graphics.drawCenteredString(this.font, Component.literal("REVELANDO RAREZA..."),
-                    centerX, centerY - 20, 0xFFE6E0EE);
-            graphics.drawCenteredString(this.font, Component.literal(rarity.name()),
-                    centerX, centerY + 8, pulse);
-            graphics.fill(centerX - 90, centerY + 35, centerX + 90, centerY + 38, rarity.getColor());
+        if (phase == Phase.RARITY) {
+            graphics.drawCenteredString(this.font, "1/2 - GIRANDO LA RAREZA", centerX, centerY - 72, 0xFFE6E0EE);
+            drawRarityReel(graphics, centerX, centerY - 25, rarityOffset);
+        } else if (phase == Phase.ITEM) {
+            graphics.drawCenteredString(this.font, "2/2 - GIRANDO EL OBJETO", centerX, centerY - 72, rarity.getColor());
+            graphics.drawCenteredString(this.font, "Rareza: " + rarity.name(), centerX, centerY - 55, rarity.getColor());
+            drawItemReel(graphics, centerX, centerY + 2, itemOffset);
         } else {
-            graphics.drawCenteredString(this.font, Component.literal("¡RAREZA " + rarity.name() + "!"),
-                    centerX, centerY - 37, rarity.getColor());
-            graphics.renderItem(reward, centerX - 8, centerY - 12);
-            graphics.drawCenteredString(this.font, reward.getHoverName(),
-                    centerX, centerY + 18, 0xFFFFFFFF);
-            graphics.drawCenteredString(this.font, Component.literal("Recompensa guardada en tu colección"),
-                    centerX, centerY + 43, 0xFFFFD45A);
-            graphics.drawCenteredString(this.font, Component.literal("Pulsa C para abrir tu colección"),
-                    centerX, centerY + 62, 0xFFE6E0EE);
+            graphics.drawCenteredString(this.font, "¡RECOMPENSA OBTENIDA!", centerX, centerY - 55, rarity.getColor());
+            graphics.renderItem(reward, centerX - 8, centerY - 30);
+            graphics.drawCenteredString(this.font, reward.getHoverName(), centerX, centerY - 5, 0xFFFFFFFF);
+            graphics.drawCenteredString(this.font, "Rareza: " + rarity.name(), centerX, centerY + 13, rarity.getColor());
+            graphics.drawCenteredString(this.font, "Guardada en tu colección", centerX, centerY + 36, 0xFFFFD45A);
+            graphics.drawCenteredString(this.font, "Pulsa C para abrir tu colección", centerX, centerY + 58, 0xFFE6E0EE);
         }
 
-        graphics.drawCenteredString(this.font, Component.literal("Pulsa ESC para cerrar"),
-                centerX, centerY + 80, 0xFFB8B0C5);
+        if (phase != Phase.RESULT) {
+            graphics.drawCenteredString(this.font, "La ruleta se detendrá en tu recompensa", centerX, centerY + 88, 0xFFB8B0C5);
+        }
+        graphics.drawCenteredString(this.font, "Pulsa ESC para cerrar", centerX, centerY + 101, 0xFFB8B0C5);
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void drawRarityReel(GuiGraphics graphics, int centerX, int y, float offset) {
+        graphics.enableScissor(centerX - 205, y - 25, centerX + 205, y + 25);
+        for (int i = 0; i < rarityReel.size(); i++) {
+            int x = centerX - 56 + i * SLOT_WIDTH - Math.round(offset);
+            if (x < centerX - 210 || x > centerX + 210) continue;
+            LootRarity tier = rarityReel.get(i);
+            graphics.fill(x, y - 19, x + SLOT_WIDTH - 6, y + 19, 0xFF393142);
+            graphics.drawCenteredString(this.font, tier.name(), x + (SLOT_WIDTH - 6) / 2, y - 4, tier.getColor());
+        }
+        graphics.disableScissor();
+        graphics.fill(centerX - 2, y - 27, centerX + 2, y + 27, 0xFFFFD45A);
+        graphics.fill(centerX - 58, y - 24, centerX + 58, y - 21, 0xFFFFD45A);
+        graphics.fill(centerX - 58, y + 21, centerX + 58, y + 24, 0xFFFFD45A);
+    }
+
+    private void drawItemReel(GuiGraphics graphics, int centerX, int y, float offset) {
+        graphics.enableScissor(centerX - 205, y - 30, centerX + 205, y + 30);
+        for (int i = 0; i < itemReel.size(); i++) {
+            int x = centerX - 56 + i * SLOT_WIDTH - Math.round(offset);
+            if (x < centerX - 210 || x > centerX + 210) continue;
+            ItemStack stack = itemReel.get(i);
+            graphics.fill(x, y - 25, x + SLOT_WIDTH - 6, y + 25, 0xFF393142);
+            graphics.renderItem(stack, x + 5, y - 8);
+            graphics.drawString(this.font, stack.getHoverName(), x + 25, y - 3, 0xFFFFFFFF, false);
+        }
+        graphics.disableScissor();
+        graphics.fill(centerX - 2, y - 34, centerX + 2, y + 34, 0xFFFFD45A);
+        graphics.fill(centerX - 58, y - 31, centerX + 58, y - 28, 0xFFFFD45A);
+        graphics.fill(centerX - 58, y + 28, centerX + 58, y + 31, 0xFFFFD45A);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 67 && ticks >= RARITY_REVEAL_TICKS) {
+        if (keyCode == 67 && phase == Phase.RESULT) {
             JumpNetwork.requestStorage();
             return true;
         }
