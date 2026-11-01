@@ -5,10 +5,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * First visual pass of the roulette: rarity reveal followed by the preselected item.
- * The outcome is supplied by the server and is never changed by the animation.
- */
 public final class LootRouletteScreen extends Screen {
     private static final int RARITY_REVEAL_TICKS = 55;
     private final LootRarity rarity;
@@ -22,9 +18,7 @@ public final class LootRouletteScreen extends Screen {
     }
 
     @Override
-    public void tick() {
-        ticks++;
-    }
+    public void tick() { ticks++; }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -34,7 +28,6 @@ public final class LootRouletteScreen extends Screen {
 
         graphics.fill(centerX - 150, centerY - 95, centerX + 150, centerY + 100, 0xE91A1720);
         graphics.fill(centerX - 148, centerY - 93, centerX + 148, centerY + 98, 0xE92A2533);
-
         graphics.drawCenteredString(this.font, Component.literal("JUMP LOOT"), centerX, centerY - 78, 0xFFFFD45A);
 
         if (ticks < RARITY_REVEAL_TICKS) {
@@ -50,8 +43,10 @@ public final class LootRouletteScreen extends Screen {
             graphics.renderItem(reward, centerX - 8, centerY - 12);
             graphics.drawCenteredString(this.font, reward.getHoverName(),
                     centerX, centerY + 18, 0xFFFFFFFF);
-            graphics.drawCenteredString(this.font, Component.literal("Recompensa desbloqueada"),
+            graphics.drawCenteredString(this.font, Component.literal("Recompensa guardada en tu colección"),
                     centerX, centerY + 43, 0xFFFFD45A);
+            graphics.drawCenteredString(this.font, Component.literal("Pulsa C para abrir tu colección"),
+                    centerX, centerY + 62, 0xFFE6E0EE);
         }
 
         graphics.drawCenteredString(this.font, Component.literal("Pulsa ESC para cerrar"),
@@ -60,7 +55,14 @@ public final class LootRouletteScreen extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() {
-        return false;
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 67 && ticks >= RARITY_REVEAL_TICKS) {
+            JumpNetwork.requestStorage();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
+
+    @Override
+    public boolean isPauseScreen() { return false; }
 }
