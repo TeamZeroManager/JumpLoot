@@ -2,7 +2,7 @@ name: Build Jump Loot
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/particle-roulette" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
