@@ -38,7 +38,7 @@ public final class ClientJumpHud {
         int logicalWidth = ClientHudConfig.WIDTH.get();
         int width = (int) Math.round(logicalWidth * scale);
         int height = (int) Math.round(BASE_HEIGHT * scale);
-        int x = screenWidth - (int) Math.round(EDGE_PADDING * scale) - width;
+        int x = (int) Math.round(EDGE_PADDING * scale);
         int y = screenHeight - (int) Math.round(EDGE_PADDING * scale) - height;
 
         float targetProgress = Math.min(1.0F, (float) currentJumps / targetJumps);
