@@ -8,7 +8,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.SpawnEggItem;
-import net.minecraft.world.item.SpawnEggItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,9 +81,6 @@ public final class LootItemCatalog {
             }
 
             LootRarity rarity = RARITY_OVERRIDES.get(id.toString());
-            if (rarity == null && item instanceof SpawnEggItem) {
-                rarity = LootRarity.RARE;
-            }
             if (rarity == null && isEmeraldRelated(id)) {
                 rarity = LootRarity.UNCOMMON;
             }
@@ -184,13 +180,19 @@ public final class LootItemCatalog {
         overrides.put("minecraft:diamond_boots", LootRarity.RARE);
         overrides.put("minecraft:totem_of_undying", LootRarity.EPIC);
         overrides.put("minecraft:trident", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_chestplate", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_sword", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_pickaxe", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_axe", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_helmet", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_leggings", LootRarity.EPIC);
-        overrides.put("minecraft:netherite_boots", LootRarity.EPIC);
+        // Netherite equipment is legendary because obtaining it requires a long progression.
+        overrides.put("minecraft:netherite_sword", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_pickaxe", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_axe", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_shovel", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_hoe", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_helmet", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_chestplate", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_leggings", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_boots", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_scrap", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_ingot", LootRarity.LEGENDARY);
+        overrides.put("minecraft:netherite_block", LootRarity.LEGENDARY);
         return Collections.unmodifiableMap(overrides);
     }
 
