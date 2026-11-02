@@ -9,9 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class LootStorageScreen extends Screen {
-    private static final int ROW_HEIGHT = 24;
+    private static final int COLUMNS = 9;
+    private static final int ROWS = 4;
+    private static final int SLOT = 20;
+    private static final int GRID_WIDTH = COLUMNS * SLOT;
     private final List<ItemStack> items = new ArrayList<>();
-    private int scroll;
+    private int firstRow;
     private int selected = -1;
     private boolean confirmDiscard;
 
@@ -20,61 +23,96 @@ public final class LootStorageScreen extends Screen {
         for (ItemStack stack : contents) items.add(stack.copy());
     }
 
+    private int visibleRows() {
+        return Math.min(ROWS, Math.max(1, (items.size() + COLUMNS - 1) / COLUMNS));
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
-        int left = this.width / 2 - 150;
-        int top = this.height / 2 - 105;
-        int right = left + 300;
-        graphics.fill(left, top, right, top + 210, 0xE91A1720);
-        graphics.fill(left + 2, top + 2, right - 2, top + 208, 0xE92A2533);
-        graphics.drawCenteredString(this.font, "JUMP LOOT - COLECCIÓN", this.width / 2, top + 10, 0xFFFFD45A);
-        graphics.drawString(this.font, "Objetos guardados: " + items.size(), left + 12, top + 27, 0xFFE6E0EE);
+        int left = this.width / 2 - 165;
+        int top = this.height / 2 - 116;
+        int right = left + 330;
+        graphics.fill(left, top, right, top + 232, 0xF0100D16);
+        graphics.fill(left + 2, top + 2, right - 2, top + 230, 0xF0272231);
+        graphics.fill(left + 4, top + 4, right - 4, top + 28, 0xFF17121F);
+        graphics.drawCenteredString(this.font, "✦  JUMP LOOT  ·  COLECCIÓN  ✦", this.width / 2, top + 11, 0xFFFFD45A);
+        graphics.drawString(this.font, "Recompensas: " + items.size(), left + 12, top + 35, 0xFFE6E0EE);
 
-        int visible = 6;
-        for (int row = 0; row < visible; row++) {
-            int index = scroll + row;
-            if (index >= items.size()) break;
-            int y = top + 43 + row * ROW_HEIGHT;
-            graphics.fill(left + 9, y, right - 9, y + 21,
-                    selected == index ? 0xFF51445F : 0xFF342D3E);
-            ItemStack stack = items.get(index);
-            graphics.renderItem(stack, left + 14, y + 2);
-            graphics.drawString(this.font, stack.getHoverName(), left + 38, y + 7, 0xFFFFFFFF);
-            graphics.drawString(this.font, "x" + stack.getCount(), right - 35, y + 7, 0xFFFFD45A);
+        int gridLeft = this.width / 2 - GRID_WIDTH / 2;
+        int gridTop = top + 52;
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLUMNS; col++) {
+                int index = (firstRow + row) * COLUMNS + col;
+                int x = gridLeft + col * SLOT;
+                int y = gridTop + row * SLOT;
+                boolean occupied = index < items.size();
+                boolean hovered = mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18;
+                int slotColor = selected == index ? 0xFF80633B : (hovered ? 0xFF62566B : 0xFF514653);
+                graphics.fill(x, y, x + 18, y + 18, 0xFF17131C);
+                graphics.fill(x + 1, y + 1, x + 17, y + 17, slotColor);
+                graphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF302A37);
+                if (occupied) {
+                    ItemStack stack = items.get(index);
+                    graphics.renderItem(stack, x + 1, y + 1);
+                    if (stack.getCount() > 1) {
+                        graphics.renderItemDecorations(this.font, stack, x + 1, y + 1);
+                    }
+                    if (hovered) graphics.renderTooltip(this.font, stack, mouseX, mouseY);
+                }
+            }
         }
 
-        if (items.isEmpty()) {
-            graphics.drawCenteredString(this.font, "Todavía no tienes recompensas.", this.width / 2, top + 105, 0xFFB8B0C5);
+        int maxRows = (items.size() + COLUMNS - 1) / COLUMNS;
+        if (maxRows > ROWS) {
+            graphics.drawString(this.font, "Rueda del ratón: desplazarse  (" + (firstRow + 1) + "/" + maxRows + ")", left + 12, top + 137, 0xFFBDB4C9);
         }
 
-        String actionText = selected < 0 ? "Selecciona un objeto" :
-                (confirmDiscard ? "¿Descartar? Pulsa D para confirmar" : "ENTER: reclamar   |   D: descartar");
-        graphics.drawCenteredString(this.font, actionText, this.width / 2, top + 190, 0xFFB8B0C5);
+        int detailsY = top + 158;
+        graphics.fill(left + 9, detailsY, right - 9, detailsY + 34, 0xFF1A1521);
+        if (selected >= 0 && selected < items.size()) {
+            ItemStack stack = items.get(selected);
+            graphics.renderItem(stack, left + 16, detailsY + 8);
+            graphics.drawString(this.font, stack.getHoverName(), left + 40, detailsY + 7, 0xFFFFFFFF);
+            graphics.drawString(this.font, "Cantidad: " + stack.getCount(), left + 40, detailsY + 19, 0xFFFFD45A);
+        } else {
+            graphics.drawCenteredString(this.font, "Selecciona una recompensa", this.width / 2, detailsY + 13, 0xFFBDB4C9);
+        }
+
+        String action = selected < 0 ? "ENTER: reclamar   ·   D: descartar" :
+                (confirmDiscard ? "¿Descartar esta recompensa? Pulsa D otra vez" : "ENTER: reclamar   ·   D: descartar");
+        graphics.drawCenteredString(this.font, action, this.width / 2, top + 205, confirmDiscard ? 0xFFFF7777 : 0xFFE6E0EE);
+        graphics.drawCenteredString(this.font, "ESC: cerrar", this.width / 2, top + 218, 0xFFBDB4C9);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int left = this.width / 2 - 150;
-        int top = this.height / 2 - 105;
-        if (mouseX >= left + 9 && mouseX <= left + 291 && mouseY >= top + 43 && mouseY < top + 43 + 6 * ROW_HEIGHT) {
-            int row = (int) ((mouseY - (top + 43)) / ROW_HEIGHT);
-            int index = scroll + row;
-            if (index >= 0 && index < items.size()) {
+        int gridLeft = this.width / 2 - GRID_WIDTH / 2;
+        int gridTop = this.height / 2 - 116 + 52;
+        if (mouseX >= gridLeft && mouseX < gridLeft + GRID_WIDTH && mouseY >= gridTop && mouseY < gridTop + ROWS * SLOT) {
+            int col = (int) ((mouseX - gridLeft) / SLOT);
+            int row = (int) ((mouseY - gridTop) / SLOT);
+            int index = (firstRow + row) * COLUMNS + col;
+            if (index < items.size()) {
                 selected = index;
-                confirmDiscard = false;
-                if (button == 1) confirmDiscard = true;
-                return true;
+                confirmDiscard = button == 1;
             }
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int maxRows = (items.size() + COLUMNS - 1) / COLUMNS;
+        int maxFirstRow = Math.max(0, maxRows - ROWS);
+        firstRow = Math.max(0, Math.min(maxFirstRow, firstRow - (int) Math.signum(delta)));
+        return true;
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 265) { scroll = Math.max(0, scroll - 1); return true; }
-        if (keyCode == 264) { scroll = Math.min(Math.max(0, items.size() - 6), scroll + 1); return true; }
         if (keyCode == 256) { onClose(); return true; }
         if (selected >= 0 && selected < items.size() && keyCode == 257) {
             JumpNetwork.claimStorage(selected);
@@ -89,5 +127,5 @@ public final class LootStorageScreen extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() { return true; }
 }
