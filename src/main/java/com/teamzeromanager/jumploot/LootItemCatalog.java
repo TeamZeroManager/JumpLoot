@@ -2,9 +2,11 @@ package com.teamzeromanager.jumploot;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.RecordItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,8 +19,8 @@ import java.util.Set;
 
 /**
  * Builds a snapshot of eligible registered items after the item registry is ready.
- * Modded items are included automatically. Dangerous/admin items are excluded
- * conservatively by exact registry ID; additional IDs can be supplied by config later.
+ * Modded items are included automatically. Music discs and banners are excluded
+ * by item type, including modded subclasses, alongside dangerous/admin items.
  */
 public final class LootItemCatalog {
     private static final Set<String> DEFAULT_BLACKLIST = Set.of(
@@ -63,6 +65,12 @@ public final class LootItemCatalog {
         for (Item item : BuiltInRegistries.ITEM) {
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
             if (id == null || blacklist.contains(id.toString())) {
+                continue;
+            }
+
+            // Type-based filtering also catches modded music discs and banners,
+            // regardless of their registry namespace or translated display name.
+            if (item instanceof RecordItem || item instanceof BannerItem) {
                 continue;
             }
 
