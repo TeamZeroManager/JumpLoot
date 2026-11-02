@@ -1,7 +1,9 @@
 package com.teamzeromanager.jumploot;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -17,6 +19,18 @@ public final class LootStorageScreen extends Screen {
     private int firstRow;
     private int selected = -1;
     private boolean confirmDiscard;
+
+    @Override
+    protected void init() {
+        int left = this.width / 2 - 165;
+        int top = this.height / 2 - 116;
+        addRenderableWidget(Button.builder(Component.literal("✦"), button ->
+                Minecraft.getInstance().setScreen(new LootCatalogScreen(this)))
+                .bounds(left + 294, top + 7, 20, 18)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(
+                        Component.literal("Ver posibles recompensas")))
+                .build());
+    }
 
     public LootStorageScreen(List<ItemStack> contents) {
         super(Component.literal("Jump Loot - Colección"));
