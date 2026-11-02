@@ -102,6 +102,9 @@ public final class LootRouletteScreen extends Screen {
         graphics.fill(centerX - 224, centerY - 124, centerX + 224, centerY + 124, GOLD);
         graphics.fill(centerX - 221, centerY - 121, centerX + 221, centerY + 121, 0xF0181420);
         graphics.fill(centerX - 216, centerY - 116, centerX + 216, centerY + 116, 0xF0252030);
+        if (phase != Phase.RARITY) {
+            drawRarityAtmosphere(graphics, centerX, centerY, rarity, phase == Phase.RESULT);
+        }
         graphics.drawCenteredString(this.font, "✦  JUMP LOOT  ✦", centerX, centerY - 104, GOLD);
         graphics.drawCenteredString(this.font, "Una recompensa por tus saltos", centerX, centerY - 88, MUTED);
 
@@ -113,6 +116,7 @@ public final class LootRouletteScreen extends Screen {
             graphics.drawCenteredString(this.font, "Rareza: " + rarity.name(), centerX, centerY - 55, rarity.getColor());
             drawItemReel(graphics, centerX, centerY + 2, itemOffset);
         } else {
+            drawRevealBurst(graphics, centerX, centerY - 18, rarity);
             graphics.drawCenteredString(this.font, "¡RECOMPENSA OBTENIDA!", centerX, centerY - 55, rarity.getColor());
             graphics.renderItem(reward, centerX - 8, centerY - 30);
             graphics.drawCenteredString(this.font, reward.getHoverName(), centerX, centerY - 5, 0xFFFFFFFF);
@@ -152,6 +156,10 @@ public final class LootRouletteScreen extends Screen {
             if (x < centerX - 210 || x > centerX + 210) continue;
             ItemStack stack = itemReel.get(i);
             graphics.fill(x, y - 26, x + SLOT_WIDTH - 6, y + 26, 0xFF09070D);
+            if (i == itemWinner) {
+                int pulse = 2 + (int) (Math.sin((phaseTick + 1) * 0.22F) * 2.0F);
+                graphics.fill(x - pulse, y - 26 - pulse, x + SLOT_WIDTH - 6 + pulse, y + 26 + pulse, withAlpha(rarity.getColor(), 150));
+            }
             graphics.fill(x + 1, y - 25, x + SLOT_WIDTH - 7, y + 25, i == itemWinner ? rarity.getColor() : 0xFF51465C);
             graphics.fill(x + 2, y - 24, x + SLOT_WIDTH - 8, y + 24, 0xFF30283A);
             graphics.renderItem(stack, x + 5, y - 8);
@@ -161,6 +169,66 @@ public final class LootRouletteScreen extends Screen {
         graphics.fill(centerX - 2, y - 36, centerX + 2, y + 36, GOLD);
         graphics.fill(centerX - 9, y - 39, centerX + 9, y - 36, GOLD);
         graphics.fill(centerX - 9, y + 36, centerX + 9, y + 39, GOLD);
+    }
+
+    /**
+     * Tier-specific ambient glow. Higher tiers receive more motes and a stronger pulse.
+     * All effects are drawn with lightweight GUI primitives (no external assets).
+     */
+    private void drawRarityAtmosphere(GuiGraphics graphics, int cx, int cy, LootRarity tier, boolean reveal) {
+        int color = tier.getColor();
+        int level = switch (tier) {
+            case COMMON -> 1;
+            case UNCOMMON -> 2;
+            case RARE -> 3;
+            case EPIC -> 4;
+            case LEGENDARY -> 5;
+        };
+        float pulse = 0.5F + 0.5F * (float) Math.sin((phaseTick + 1) * (reveal ? 0.18F : 0.10F));
+        int alpha = 35 + (int) (pulse * (level * 13));
+        int inset = 4 + level * 2;
+        graphics.fill(cx - 216 + inset, cy - 116 + inset, cx + 216 - inset, cy - 114 + inset, withAlpha(color, alpha));
+        graphics.fill(cx - 216 + inset, cy + 114 - inset, cx + 216 - inset, cy + 116 - inset, withAlpha(color, alpha));
+        graphics.fill(cx - 216 + inset, cy - 116 + inset, cx - 214 + inset, cy + 116 - inset, withAlpha(color, alpha));
+        graphics.fill(cx + 214 - inset, cy - 116 + inset, cx + 216 - inset, cy + 116 - inset, withAlpha(color, alpha));
+
+        int motes = 3 + level * 5 + (reveal ? level * 3 : 0);
+        for (int i = 0; i < motes; i++) {
+            double seed = i * 2.399963229728653;
+            double orbit = 24 + ((i * 17 + phaseTick * (reveal ? 3 : 1)) % 155);
+            int x = cx + (int) (Math.cos(seed + phaseTick * 0.035) * orbit * 1.25);
+            int y = cy + (int) (Math.sin(seed + phaseTick * 0.045) * orbit * 0.48);
+            int size = level >= 4 && i % 4 == 0 ? 3 : 2;
+            graphics.fill(x, y, x + size, y + size, withAlpha(color, 70 + (int) (pulse * 130)));
+        }
+    }
+
+    /** A stronger, short-lived burst when the final reward is revealed. */
+    private void drawRevealBurst(GuiGraphics graphics, int cx, int cy, LootRarity tier) {
+        int color = tier.getColor();
+        int level = switch (tier) {
+            case COMMON -> 1;
+            case UNCOMMON -> 2;
+            case RARE -> 3;
+            case EPIC -> 4;
+            case LEGENDARY -> 5;
+        };
+        float pulse = 0.5F + 0.5F * (float) Math.sin((phaseTick + 1) * 0.24F);
+        int radius = 22 + level * 5 + (int) (pulse * (8 + level * 5));
+        graphics.fill(cx - radius, cy - 1, cx + radius, cy + 1, withAlpha(color, 35 + level * 18));
+        graphics.fill(cx - 1, cy - radius, cx + 1, cy + radius, withAlpha(color, 35 + level * 18));
+        int sparks = 4 + level * 5;
+        for (int i = 0; i < sparks; i++) {
+            double angle = (Math.PI * 2.0 * i / sparks) + phaseTick * 0.025;
+            int distance = radius + (i % 3) * 7;
+            int x = cx + (int) (Math.cos(angle) * distance);
+            int y = cy + (int) (Math.sin(angle) * distance * 0.55);
+            graphics.fill(x - 1, y - 1, x + 2, y + 2, withAlpha(color, 100 + (int) (pulse * 155)));
+        }
+    }
+
+    private int withAlpha(int color, int alpha) {
+        return (Math.max(0, Math.min(255, alpha)) << 24) | (color & 0x00FFFFFF);
     }
 
     @Override
