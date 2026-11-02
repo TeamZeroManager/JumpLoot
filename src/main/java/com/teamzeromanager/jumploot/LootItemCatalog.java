@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.SpawnEggItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,7 +72,7 @@ public final class LootItemCatalog {
 
             // Type-based filtering also catches modded music discs and banners,
             // regardless of their registry namespace or translated display name.
-            if (item instanceof RecordItem || item instanceof BannerItem) {
+            if (item instanceof RecordItem || item instanceof BannerItem || item instanceof SpawnEggItem) {
                 continue;
             }
 
