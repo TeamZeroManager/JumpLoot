@@ -106,7 +106,7 @@ public final class LootRouletteScreen extends Screen {
 
         if (phase == Phase.RARITY) {
             graphics.drawCenteredString(font, "01  ·  REVELANDO RAREZA", cx, cy - 53, GOLD);
-            drawParticleConvergence(graphics, cx, cy + 3, rarity.getColor(), progress(RARITY_DURATION), false);
+            drawParticleConvergence(graphics, cx, cy + 3, rarity.getColor(), progress(RARITY_DURATION), false, 1.0F);
             float reveal = easeIn(Math.max(0.0F, (progress(RARITY_DURATION) - 0.72F) / 0.28F));
             if (reveal > 0.02F) {
                 int alpha = (int) (255 * reveal);
@@ -115,7 +115,7 @@ public final class LootRouletteScreen extends Screen {
             }
         } else if (phase == Phase.ITEM) {
             graphics.drawCenteredString(font, "02  ·  MATERIALIZANDO RECOMPENSA", cx, cy - 53, rarity.getColor());
-            drawParticleConvergence(graphics, cx, cy + 2, rarity.getColor(), progress(ITEM_DURATION), true);
+            drawParticleConvergence(graphics, cx, cy + 2, rarity.getColor(), progress(ITEM_DURATION), true, 1.0F);
             float reveal = easeIn(Math.max(0.0F, (progress(ITEM_DURATION) - 0.68F) / 0.32F));
             if (reveal > 0.01F) {
                 int alpha = (int) (255 * reveal);
@@ -130,8 +130,11 @@ public final class LootRouletteScreen extends Screen {
                         (alpha << 24) | 0x00FFFFFF);
             }
         } else {
-            drawParticleConvergence(graphics, cx, cy - 17, rarity.getColor(), 1.0F, true);
-            drawRevealBurst(graphics, cx, cy - 17, rarity.getColor());
+            float effectFade = 1.0F - easeIn(Math.max(0.0F, Math.min(1.0F, (phaseTick - 20) / 35.0F)));
+            if (effectFade > 0.01F) {
+                drawParticleConvergence(graphics, cx, cy - 17, rarity.getColor(), 1.0F, true, effectFade);
+                drawRevealBurst(graphics, cx, cy - 17, rarity.getColor(), effectFade);
+            }
             graphics.drawCenteredString(font, "¡RECOMPENSA OBTENIDA!", cx, cy - 58, rarity.getColor());
             graphics.pose().pushPose();
             graphics.pose().translate(cx, cy - 23, 0);
@@ -153,7 +156,7 @@ public final class LootRouletteScreen extends Screen {
      * bright core. The second stage resolves that core into the reward icon.
      */
     private void drawParticleConvergence(GuiGraphics graphics, int cx, int cy, int color,
-                                         float progress, boolean itemStage) {
+                                         float progress, boolean itemStage, float effectFade) {
         float gather = easeIn(progress);
         float rotation = phaseTick * (itemStage ? 0.095F : 0.075F);
         float pulse = 0.55F + 0.45F * (float) Math.sin((phaseTick + 1) * 0.19F);
@@ -171,12 +174,12 @@ public final class LootRouletteScreen extends Screen {
             int x = cx + Math.round((float) Math.cos(angle) * orbit + drift);
             int y = cy + Math.round((float) Math.sin(angle) * orbit * 0.58F);
             int size = particle.size + (gather > 0.82F ? 1 : 0);
-            int alpha = Math.min(255, (int) ((105 + pulse * 120 + particleGather * 30) * Math.min(1.0F, localProgress * 3.2F)));
+            int alpha = Math.min(255, (int) ((105 + pulse * 120 + particleGather * 30) * Math.min(1.0F, localProgress * 3.2F) * effectFade));
             graphics.fill(x, y, x + size, y + size, withAlpha(color, alpha));
 
             // Tiny white glints make the converging energy feel brighter.
             if (i % 7 == 0 && (phaseTick + i) % 3 == 0) {
-                graphics.fill(x - 1, y - 1, x + 1, y + 1, withAlpha(0xFFFFFFFF, (int) (alpha * 0.8F)));
+                graphics.fill(x - 1, y - 1, x + 1, y + 1, withAlpha(0xFFFFFFFF, (int) (alpha * 0.8F * effectFade)));
             }
         }
 
@@ -184,22 +187,22 @@ public final class LootRouletteScreen extends Screen {
             float core = (gather - 0.58F) / 0.42F;
             int radius = 3 + (int) (core * (itemStage ? 12 : 9) * pulse);
             graphics.fill(cx - radius, cy - radius, cx + radius, cy + radius,
-                    withAlpha(color, (int) (80 + core * 150)));
-            graphics.fill(cx - 2, cy - 2, cx + 2, cy + 2, withAlpha(0xFFFFFFFF, (int) (180 + core * 75)));
+                    withAlpha(color, (int) ((80 + core * 150) * effectFade)));
+            graphics.fill(cx - 2, cy - 2, cx + 2, cy + 2, withAlpha(0xFFFFFFFF, (int) ((180 + core * 75) * effectFade)));
         }
     }
 
-    private void drawRevealBurst(GuiGraphics graphics, int cx, int cy, int color) {
+    private void drawRevealBurst(GuiGraphics graphics, int cx, int cy, int color, float effectFade) {
         float pulse = 0.5F + 0.5F * (float) Math.sin((phaseTick + 1) * 0.24F);
         int radius = 30 + (int) (pulse * 13);
-        graphics.fill(cx - radius, cy - 1, cx + radius, cy + 1, withAlpha(color, 75));
+        graphics.fill(cx - radius, cy - 1, cx + radius, cy + 1, withAlpha(color, (int) (75 * effectFade)));
         graphics.fill(cx - 1, cy - radius, cx + 1, cy + radius, withAlpha(color, 75));
         for (int i = 0; i < 20; i++) {
             double angle = Math.PI * 2.0 * i / 20.0 + phaseTick * 0.025;
             int distance = radius + (i % 3) * 7;
             int x = cx + (int) (Math.cos(angle) * distance);
             int y = cy + (int) (Math.sin(angle) * distance * 0.55);
-            graphics.fill(x - 1, y - 1, x + 2, y + 2, withAlpha(color, 150 + (int) (pulse * 105)));
+            graphics.fill(x - 1, y - 1, x + 2, y + 2, withAlpha(color, (int) ((150 + pulse * 105) * effectFade)));
         }
     }
 
