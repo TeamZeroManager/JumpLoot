@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.SmithingTemplateItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -81,6 +82,9 @@ public final class LootItemCatalog {
             }
 
             LootRarity rarity = RARITY_OVERRIDES.get(id.toString());
+            if (rarity == null && item instanceof SmithingTemplateItem) {
+                rarity = LootRarity.RARE;
+            }
             if (rarity == null && isEmeraldRelated(id)) {
                 rarity = LootRarity.UNCOMMON;
             }
@@ -140,6 +144,7 @@ public final class LootItemCatalog {
         overrides.put("minecraft:dragon_egg", LootRarity.LEGENDARY);
         overrides.put("minecraft:dragon_head", LootRarity.LEGENDARY);
         overrides.put("minecraft:ancient_debris", LootRarity.EPIC);
+        overrides.put("minecraft:netherite_upgrade_smithing_template", LootRarity.LEGENDARY);
         overrides.put("minecraft:dragon_breath", LootRarity.EPIC);
         overrides.put("minecraft:beacon", LootRarity.EPIC);
         overrides.put("minecraft:ender_eye", LootRarity.EPIC);
