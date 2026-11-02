@@ -106,7 +106,9 @@ public final class LootRouletteScreen extends Screen {
 
         if (phase == Phase.RARITY) {
             graphics.drawCenteredString(font, "01  ·  REVELANDO RAREZA", cx, cy - 53, GOLD);
-            drawParticleConvergence(graphics, cx, cy + 3, rarity.getColor(), progress(RARITY_DURATION), false, 1.0F);
+            float colorReveal = easeIn(Math.max(0.0F, Math.min(1.0F, (phaseTick - 42) / 26.0F)));
+            int particleColor = blendColor(0xFFB9C6D8, rarity.getColor(), colorReveal);
+            drawParticleConvergence(graphics, cx, cy + 3, particleColor, progress(RARITY_DURATION), false, 1.0F);
             float reveal = easeIn(Math.max(0.0F, (progress(RARITY_DURATION) - 0.72F) / 0.28F));
             if (reveal > 0.02F) {
                 int alpha = (int) (255 * reveal);
@@ -204,6 +206,13 @@ public final class LootRouletteScreen extends Screen {
             int y = cy + (int) (Math.sin(angle) * distance * 0.55);
             graphics.fill(x - 1, y - 1, x + 2, y + 2, withAlpha(color, (int) ((150 + pulse * 105) * effectFade)));
         }
+    }
+
+    private int blendColor(int from, int to, float amount) {
+        int r = (int) (((from >> 16) & 255) + ((((to >> 16) & 255) - ((from >> 16) & 255)) * amount));
+        int g = (int) (((from >> 8) & 255) + ((((to >> 8) & 255) - ((from >> 8) & 255)) * amount));
+        int b = (int) ((from & 255) + (((to & 255) - (from & 255)) * amount));
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     private int withAlpha(int color, int alpha) {
