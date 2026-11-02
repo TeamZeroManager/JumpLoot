@@ -27,9 +27,9 @@ public final class InventoryButtonHandler {
         int top = event.getScreen().height / 2 - 83;
 
         Button collectionButton = Button.builder(
-                Component.literal("▤"),
+                Component.empty(),
                 button -> JumpNetwork.requestStorage()
-        ).bounds(left + 154, top + 80, 20, 20)
+        ).bounds(left + 78, top + 8, 16, 16)
          .tooltip(net.minecraft.client.gui.components.Tooltip.create(
                  Component.literal("Colección de Jump Loot")))
          .build();
