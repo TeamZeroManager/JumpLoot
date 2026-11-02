@@ -36,13 +36,15 @@ public final class LootRouletteScreen extends Screen {
         final float speed;
         final int size;
         final float wobble;
+        final float delay;
 
-        Particle(float angle, float radius, float speed, int size, float wobble) {
+        Particle(float angle, float radius, float speed, int size, float wobble, float delay) {
             this.angle = angle;
             this.radius = radius;
             this.speed = speed;
             this.size = size;
             this.wobble = wobble;
+            this.delay = delay;
         }
     }
 
@@ -61,7 +63,8 @@ public final class LootRouletteScreen extends Screen {
                     48.0F + random.nextFloat() * 112.0F,
                     0.45F + random.nextFloat() * 1.2F,
                     2 + random.nextInt(3),
-                    random.nextFloat() * 6.28F
+                    random.nextFloat() * 6.28F,
+                    random.nextFloat() * 0.58F
             ));
         }
     }
@@ -130,7 +133,11 @@ public final class LootRouletteScreen extends Screen {
             drawParticleConvergence(graphics, cx, cy - 17, rarity.getColor(), 1.0F, true);
             drawRevealBurst(graphics, cx, cy - 17, rarity.getColor());
             graphics.drawCenteredString(font, "¡RECOMPENSA OBTENIDA!", cx, cy - 58, rarity.getColor());
-            graphics.renderItem(reward, cx - 8, cy - 31);
+            graphics.pose().pushPose();
+            graphics.pose().translate(cx, cy - 23, 0);
+            graphics.pose().scale(1.5F, 1.5F, 1.0F);
+            graphics.renderItem(reward, -8, -8);
+            graphics.pose().popPose();
             graphics.drawCenteredString(font, reward.getHoverName(), cx, cy - 5, 0xFFFFFFFF);
             graphics.drawCenteredString(font, "Rareza: " + rarity.name(), cx, cy + 15, rarity.getColor());
             graphics.drawCenteredString(font, "Guardada en tu colección", cx, cy + 39, GOLD);
@@ -152,20 +159,19 @@ public final class LootRouletteScreen extends Screen {
         float pulse = 0.55F + 0.45F * (float) Math.sin((phaseTick + 1) * 0.19F);
         int maxRadius = itemStage ? 145 : 132;
 
-        // Soft radial halo around the gathering point.
-        int halo = (int) (18 + pulse * 24);
-        graphics.fill(cx - halo, cy - halo, cx + halo, cy + halo,
-                withAlpha(color, (int) (22 + pulse * 24)));
-
         for (int i = 0; i < particles.size(); i++) {
             Particle particle = particles.get(i);
+            float localProgress = Math.max(0.0F, Math.min(1.0F,
+                    (progress - particle.delay) / (1.0F - particle.delay)));
+            if (localProgress <= 0.0F) continue;
+            float particleGather = easeIn(localProgress);
             float angle = particle.angle + rotation * particle.speed;
-            float orbit = particle.radius * (1.0F - gather * 0.91F);
-            float drift = (float) Math.sin(phaseTick * 0.11F + particle.wobble) * (1.0F - gather) * 9.0F;
+            float orbit = (particle.radius + 76.0F * (1.0F - particleGather)) * (1.0F - particleGather * 0.91F);
+            float drift = (float) Math.sin(phaseTick * 0.11F + particle.wobble) * (1.0F - particleGather) * 9.0F;
             int x = cx + Math.round((float) Math.cos(angle) * orbit + drift);
             int y = cy + Math.round((float) Math.sin(angle) * orbit * 0.58F);
             int size = particle.size + (gather > 0.82F ? 1 : 0);
-            int alpha = Math.min(255, 105 + (int) (pulse * 120) + (int) (gather * 30));
+            int alpha = Math.min(255, (int) ((105 + pulse * 120 + particleGather * 30) * Math.min(1.0F, localProgress * 3.2F)));
             graphics.fill(x, y, x + size, y + size, withAlpha(color, alpha));
 
             // Tiny white glints make the converging energy feel brighter.
