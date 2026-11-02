@@ -1,5 +1,6 @@
 package com.teamzeromanager.jumploot;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -19,9 +20,11 @@ public final class LootCatalogScreen extends Screen {
     private final List<ItemStack> visibleItems = new ArrayList<>();
     private LootRarity selectedRarity = LootRarity.COMMON;
     private int scrollRow;
+    private final Screen parentScreen;
 
-    public LootCatalogScreen() {
-        super(Component.literal("Jump Loot - Recompensas"));
+    public LootCatalogScreen(Screen parentScreen) {
+        super(Component.literal("Jump Loot - Catálogo"));
+        this.parentScreen = parentScreen;
         refreshItems();
     }
 
@@ -34,10 +37,10 @@ public final class LootCatalogScreen extends Screen {
 
     @Override
     protected void init() {
-        int tabWidth = 62;
+        int tabWidth = 58;
         int totalWidth = tabWidth * rarities.size() + 4 * (rarities.size() - 1);
         int startX = (width - totalWidth) / 2;
-        int y = height / 2 - 91;
+        int y = height / 2 - 76;
         for (int i = 0; i < rarities.size(); i++) {
             LootRarity rarity = rarities.get(i);
             int x = startX + i * (tabWidth + 4);
@@ -62,7 +65,7 @@ public final class LootCatalogScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
 
         int gridLeft = cx - (COLUMNS * SLOT) / 2;
-        int gridTop = top + 45;
+        int gridTop = top + 49;
         int maxRows = Math.max(1, (visibleItems.size() + COLUMNS - 1) / COLUMNS);
         int shown = 0;
         for (int row = 0; row < ROWS; row++) {
@@ -84,11 +87,11 @@ public final class LootCatalogScreen extends Screen {
         }
         graphics.drawCenteredString(font,
                 selectedRarity.name() + "  ·  " + visibleItems.size() + " objetos",
-                cx, top + 148, selectedRarity.getColor());
+                cx, top + 151, selectedRarity.getColor());
         graphics.drawCenteredString(font,
                 "Rueda del ratón: explorar objetos  (" + (scrollRow + 1) + "/" + maxRows + ")",
-                cx, top + 164, 0xFFBDB4C9);
-        graphics.drawCenteredString(font, "ESC: volver al inventario", cx, top + 181, 0xFFE6E0EE);
+                cx, top + 167, 0xFFBDB4C9);
+        graphics.drawCenteredString(font, "ESC: volver al inventario", cx, top + 184, 0xFFE6E0EE);
     }
 
     @Override
@@ -96,6 +99,11 @@ public final class LootCatalogScreen extends Screen {
         int maxRows = Math.max(1, (visibleItems.size() + COLUMNS - 1) / COLUMNS);
         scrollRow = Mth.clamp(scrollRow - (int) Math.signum(delta), 0, Math.max(0, maxRows - ROWS));
         return true;
+    }
+
+    @Override
+    public void onClose() {
+        Minecraft.getInstance().setScreen(parentScreen);
     }
 
     @Override
