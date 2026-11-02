@@ -30,6 +30,31 @@ public final class LootRewardSelector {
         return new Result(rarity, selected);
     }
 
+    /**
+     * Forces the rarity roulette to choose only between Epic and Legendary.
+     * Existing rarity weights are preserved (4:1 by default).
+     */
+    public static Result selectGuaranteedHighRarity(RandomSource random, LootItemCatalog catalog) {
+        var highRarities = catalog.getAvailableRarities().stream()
+                .filter(rarity -> rarity == LootRarity.EPIC || rarity == LootRarity.LEGENDARY)
+                .toList();
+        if (highRarities.isEmpty()) {
+            throw new IllegalStateException("No eligible Epic or Legendary rewards are available.");
+        }
+
+        EnumMap<LootRarity, Integer> highWeights = new EnumMap<>(LootRarity.class);
+        highWeights.put(LootRarity.EPIC, LootRarity.EPIC.getDefaultWeight());
+        highWeights.put(LootRarity.LEGENDARY, LootRarity.LEGENDARY.getDefaultWeight());
+        LootRarity rarity = LootRarity.choose(random, highRarities, highWeights);
+        var eligibleItems = catalog.getItems(rarity);
+        if (eligibleItems.isEmpty()) {
+            throw new IllegalStateException("Guaranteed rarity has no eligible items: " + rarity);
+        }
+
+        ItemStack selected = eligibleItems.get(random.nextInt(eligibleItems.size()));
+        return new Result(rarity, selected);
+    }
+
     public static Map<LootRarity, Integer> defaultWeights() {
         EnumMap<LootRarity, Integer> weights = new EnumMap<>(LootRarity.class);
         for (LootRarity rarity : LootRarity.values()) {
