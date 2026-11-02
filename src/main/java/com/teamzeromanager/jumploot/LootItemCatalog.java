@@ -7,6 +7,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
+import net.minecraft.world.item.SpawnEggItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -80,6 +81,15 @@ public final class LootItemCatalog {
             }
 
             LootRarity rarity = RARITY_OVERRIDES.get(id.toString());
+            if (rarity == null && item instanceof SpawnEggItem) {
+                rarity = LootRarity.RARE;
+            }
+            if (rarity == null && isEmeraldRelated(id)) {
+                rarity = LootRarity.UNCOMMON;
+            }
+            if (rarity == null && isGoldMaterial(id)) {
+                rarity = LootRarity.UNCOMMON;
+            }
             if (rarity == null) {
                 rarity = fromItemRarity(stack.getRarity());
             }
@@ -110,12 +120,67 @@ public final class LootItemCatalog {
         return LootRarity.COMMON;
     }
 
+    private static boolean isEmeraldRelated(ResourceLocation id) {
+        return id.getPath().contains("emerald");
+    }
+
+    private static boolean isGoldMaterial(ResourceLocation id) {
+        String path = id.getPath();
+        return path.equals("gold_ingot") || path.equals("gold_nugget")
+                || path.equals("gold_block") || path.equals("raw_gold")
+                || path.equals("raw_gold_block") || path.equals("gold_ore")
+                || path.equals("deepslate_gold_ore") || path.equals("nether_gold_ore")
+                || path.equals("gilded_blackstone")
+                || path.endsWith("_gold_ore") || path.endsWith("_gold_ingot")
+                || path.endsWith("_gold_nugget") || path.endsWith("_raw_gold");
+    }
+
     private static Map<String, LootRarity> createOverrides() {
         Map<String, LootRarity> overrides = new HashMap<>();
         overrides.put("minecraft:nether_star", LootRarity.LEGENDARY);
         overrides.put("minecraft:elytra", LootRarity.LEGENDARY);
         overrides.put("minecraft:enchanted_golden_apple", LootRarity.LEGENDARY);
         overrides.put("minecraft:dragon_egg", LootRarity.LEGENDARY);
+        overrides.put("minecraft:dragon_head", LootRarity.LEGENDARY);
+        overrides.put("minecraft:ancient_debris", LootRarity.EPIC);
+        overrides.put("minecraft:dragon_breath", LootRarity.EPIC);
+        overrides.put("minecraft:beacon", LootRarity.EPIC);
+        overrides.put("minecraft:ender_eye", LootRarity.EPIC);
+        overrides.put("minecraft:wither_skeleton_skull", LootRarity.RARE);
+        overrides.put("minecraft:blaze_rod", LootRarity.RARE);
+        overrides.put("minecraft:blaze_powder", LootRarity.RARE);
+        overrides.put("minecraft:chainmail_helmet", LootRarity.UNCOMMON);
+        overrides.put("minecraft:chainmail_chestplate", LootRarity.UNCOMMON);
+        overrides.put("minecraft:chainmail_leggings", LootRarity.UNCOMMON);
+        overrides.put("minecraft:chainmail_boots", LootRarity.UNCOMMON);
+        overrides.put("minecraft:obsidian", LootRarity.RARE);
+        overrides.put("minecraft:crying_obsidian", LootRarity.RARE);
+        overrides.put("minecraft:diamond_ore", LootRarity.RARE);
+        overrides.put("minecraft:deepslate_diamond_ore", LootRarity.RARE);
+        overrides.put("minecraft:diamond_block", LootRarity.RARE);
+        overrides.put("minecraft:diamond", LootRarity.RARE);
+        overrides.put("minecraft:enchanting_table", LootRarity.UNCOMMON);
+        overrides.put("minecraft:ender_pearl", LootRarity.RARE);
+        overrides.put("minecraft:gold_ingot", LootRarity.UNCOMMON);
+        overrides.put("minecraft:gold_nugget", LootRarity.UNCOMMON);
+        overrides.put("minecraft:gold_block", LootRarity.UNCOMMON);
+        overrides.put("minecraft:raw_gold", LootRarity.UNCOMMON);
+        overrides.put("minecraft:raw_gold_block", LootRarity.UNCOMMON);
+        overrides.put("minecraft:gold_ore", LootRarity.UNCOMMON);
+        overrides.put("minecraft:deepslate_gold_ore", LootRarity.UNCOMMON);
+        overrides.put("minecraft:nether_gold_ore", LootRarity.UNCOMMON);
+        overrides.put("minecraft:gilded_blackstone", LootRarity.UNCOMMON);
+
+        // Diamond equipment and weapons are rare (not the default rarity).
+        overrides.put("minecraft:diamond_sword", LootRarity.RARE);
+        overrides.put("minecraft:diamond_pickaxe", LootRarity.RARE);
+        overrides.put("minecraft:diamond_axe", LootRarity.RARE);
+        overrides.put("minecraft:diamond_shovel", LootRarity.RARE);
+        overrides.put("minecraft:diamond_hoe", LootRarity.RARE);
+        overrides.put("minecraft:diamond_helmet", LootRarity.RARE);
+        overrides.put("minecraft:diamond_chestplate", LootRarity.RARE);
+        overrides.put("minecraft:diamond_leggings", LootRarity.RARE);
+        overrides.put("minecraft:diamond_boots", LootRarity.RARE);
         overrides.put("minecraft:totem_of_undying", LootRarity.EPIC);
         overrides.put("minecraft:trident", LootRarity.EPIC);
         overrides.put("minecraft:netherite_chestplate", LootRarity.EPIC);
