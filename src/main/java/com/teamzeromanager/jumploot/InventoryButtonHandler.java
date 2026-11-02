@@ -1,11 +1,8 @@
 package com.teamzeromanager.jumploot;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -30,9 +27,9 @@ public final class InventoryButtonHandler {
         int top = event.getScreen().height / 2 - 83;
 
         Button collectionButton = Button.builder(
-                Component.empty(),
+                Component.literal("▤"),
                 button -> JumpNetwork.requestStorage()
-        ).bounds(left + 78, top + 8, 20, 20)
+        ).bounds(left + 154, top + 80, 20, 20)
          .tooltip(net.minecraft.client.gui.components.Tooltip.create(
                  Component.literal("Colección de Jump Loot")))
          .build();
