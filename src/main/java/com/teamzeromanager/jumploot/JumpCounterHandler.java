@@ -16,9 +16,10 @@ public final class JumpCounterHandler {
     private static final String CURRENT_JUMPS_TAG = "jumploot.current_jumps";
     private static final String NEXT_TARGET_TAG = "jumploot.next_target";
 
-    private static final int FIRST_TARGET = 30;
-    private static final int TARGET_INCREMENT = 10;
-    private static final int MAX_TARGET = 100;
+    // TEST BRANCH: keep the reward threshold fixed at 10 jumps.
+    private static final int FIRST_TARGET = 10;
+    private static final int TARGET_INCREMENT = 0;
+    private static final int MAX_TARGET = 10;
 
     private JumpCounterHandler() {
     }
@@ -79,10 +80,7 @@ public final class JumpCounterHandler {
     }
 
     private static int getNextTarget(CompoundTag data) {
-        int target = data.contains(NEXT_TARGET_TAG) ? data.getInt(NEXT_TARGET_TAG) : FIRST_TARGET;
-        if (target < FIRST_TARGET) {
-            return FIRST_TARGET;
-        }
-        return Math.min(target, MAX_TARGET);
+        // Ignore a previously saved higher target while running this test build.
+        return FIRST_TARGET;
     }
 }
