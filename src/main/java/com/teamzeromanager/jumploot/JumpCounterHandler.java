@@ -57,6 +57,9 @@ public final class JumpCounterHandler {
         CompoundTag oldData = event.getOriginal().getPersistentData();
         CompoundTag newData = event.getEntity().getPersistentData();
 
+        // Preserve JumpLoot rewards when Forge replaces the player entity on death.
+        LootStorage.copyFrom(event.getOriginal(), event.getEntity());
+
         newData.putInt(NEXT_TARGET_TAG, getNextTarget(oldData));
         int currentJumps = event.isWasDeath() ? 0 : Math.max(0, oldData.getInt(CURRENT_JUMPS_TAG));
         newData.putInt(CURRENT_JUMPS_TAG, currentJumps);
