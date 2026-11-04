@@ -3,6 +3,7 @@ package com.teamzeromanager.jumploot;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -13,6 +14,22 @@ public final class LootStorage {
     private static final String STORAGE_TAG = "jumploot.reward_storage";
 
     private LootStorage() {
+    }
+
+    /**
+     * Copies the reward collection when Forge creates a replacement player entity
+     * (for example, after death). The stored list is deep-copied so the new player
+     * owns an independent NBT value.
+     */
+    public static void copyFrom(Player original, Player replacement) {
+        CompoundTag oldData = original.getPersistentData();
+        CompoundTag newData = replacement.getPersistentData();
+
+        if (oldData.contains(STORAGE_TAG, CompoundTag.TAG_LIST)) {
+            newData.put(STORAGE_TAG, oldData.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND).copy());
+        } else {
+            newData.remove(STORAGE_TAG);
+        }
     }
 
     public static void add(ServerPlayer player, ItemStack reward) {
