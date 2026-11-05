@@ -13,27 +13,34 @@ import java.util.List;
 public final class LootStorage {
     private static final String STORAGE_TAG = "jumploot.reward_storage";
     private static final String RARITY_TAG = "jumploot.rarity";
+    private static final String REVEALED_TAG = "jumploot.revealed";
 
     public static final class StoredReward {
         private final ItemStack stack;
         private final LootRarity rarity;
-        public StoredReward(ItemStack stack, LootRarity rarity) { this.stack = stack.copy(); this.rarity = rarity; }
+        private final boolean revealed;
+
+        public StoredReward(ItemStack stack, LootRarity rarity) {
+            this(stack, rarity, true);
+        }
+
+        public StoredReward(ItemStack stack, LootRarity rarity, boolean revealed) {
+            this.stack = stack.copy();
+            this.rarity = rarity;
+            this.revealed = revealed;
+        }
+
         public ItemStack stack() { return stack.copy(); }
         public LootRarity rarity() { return rarity; }
+        public boolean revealed() { return revealed; }
     }
 
     private LootStorage() {
     }
 
-    /**
-     * Copies the reward collection when Forge creates a replacement player entity
-     * (for example, after death). The stored list is deep-copied so the new player
-     * owns an independent NBT value.
-     */
     public static void copyFrom(Player original, Player replacement) {
         CompoundTag oldData = original.getPersistentData();
         CompoundTag newData = replacement.getPersistentData();
-
         if (oldData.contains(STORAGE_TAG, CompoundTag.TAG_LIST)) {
             newData.put(STORAGE_TAG, oldData.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND).copy());
         } else {
@@ -42,51 +49,51 @@ public final class LootStorage {
     }
 
     public static void add(ServerPlayer player, ItemStack reward, LootRarity rarity) {
-        if (reward == null || reward.isEmpty()) {
-            return;
-        }
+        if (reward == null || reward.isEmpty()) return;
 
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
         ItemStack remaining = reward.copy();
 
-        // Merge only stacks with identical item and NBT, respecting the live item stack limit.
+        // Merge only rewards with identical item, NBT and rarity, and only while unrevealed.
         for (int i = 0; i < stored.size() && !remaining.isEmpty(); i++) {
-            ItemStack existing = ItemStack.of(stored.getCompound(i));
             CompoundTag existingEntry = stored.getCompound(i);
-            LootRarity existingRarity = LootRarity.COMMON;
-            if (existingEntry.contains(RARITY_TAG)) {
-                try { existingRarity = LootRarity.valueOf(existingEntry.getString(RARITY_TAG)); }
-                catch (IllegalArgumentException ignored) { existingRarity = LootRarity.COMMON; }
-            }
-            if (!ItemStack.isSameItemSameTags(existing, remaining) || existingRarity != rarity) {
-                continue;
-            }
+            if (existingEntry.getBoolean(REVEALED_TAG)) continue;
+            ItemStack existing = ItemStack.of(existingEntry);
+            LootRarity existingRarity = readRarity(existingEntry);
+            if (!ItemStack.isSameItemSameTags(existing, remaining) || existingRarity != rarity) continue;
 
             int limit = Math.max(1, existing.getMaxStackSize());
-            int room = Math.max(0, limit - existing.getCount());
-            int moved = Math.min(room, remaining.getCount());
+            int moved = Math.min(Math.max(0, limit - existing.getCount()), remaining.getCount());
             if (moved > 0) {
                 existing.grow(moved);
                 remaining.shrink(moved);
                 CompoundTag merged = existing.save(new CompoundTag());
                 merged.putString(RARITY_TAG, rarity.name());
+                merged.putBoolean(REVEALED_TAG, false);
                 stored.set(i, merged);
             }
         }
 
-        // Split overflow into legal stack sizes; no fixed vanilla-only cap is assumed.
         while (!remaining.isEmpty()) {
             int amount = Math.min(remaining.getCount(), Math.max(1, remaining.getMaxStackSize()));
             ItemStack part = remaining.copy();
             part.setCount(amount);
             CompoundTag entry = part.save(new CompoundTag());
             entry.putString(RARITY_TAG, rarity.name());
+            entry.putBoolean(REVEALED_TAG, false);
             stored.add(entry);
             remaining.shrink(amount);
         }
-
         data.put(STORAGE_TAG, stored);
+    }
+
+    private static LootRarity readRarity(CompoundTag entry) {
+        if (entry.contains(RARITY_TAG)) {
+            try { return LootRarity.valueOf(entry.getString(RARITY_TAG)); }
+            catch (IllegalArgumentException ignored) { }
+        }
+        return LootRarity.COMMON;
     }
 
     public static List<StoredReward> getRewards(ServerPlayer player) {
@@ -96,40 +103,46 @@ public final class LootStorage {
             CompoundTag entry = stored.getCompound(i);
             ItemStack stack = ItemStack.of(entry);
             if (!stack.isEmpty()) {
-                LootRarity rarity = LootRarity.COMMON;
-                if (entry.contains(RARITY_TAG)) {
-                    try { rarity = LootRarity.valueOf(entry.getString(RARITY_TAG)); }
-                    catch (IllegalArgumentException ignored) { rarity = LootRarity.COMMON; }
-                }
-                result.add(new StoredReward(stack, rarity));
+                result.add(new StoredReward(stack, readRarity(entry), entry.getBoolean(REVEALED_TAG)));
             }
         }
         return result;
     }
 
-    public static List<ItemStack> getContents(ServerPlayer player) {
-        List<ItemStack> result = new ArrayList<>();
+    /** Marks every pending reward revealed exactly once and returns that batch for animation. */
+    public static List<StoredReward> revealPending(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
+        List<StoredReward> pending = new ArrayList<>();
+        for (int i = 0; i < stored.size(); i++) {
+            CompoundTag entry = stored.getCompound(i);
+            ItemStack stack = ItemStack.of(entry);
+            if (stack.isEmpty() || entry.getBoolean(REVEALED_TAG)) continue;
+            pending.add(new StoredReward(stack, readRarity(entry), false));
+            entry.putBoolean(REVEALED_TAG, true);
+            stored.set(i, entry);
+        }
+        data.put(STORAGE_TAG, stored);
+        return pending;
+    }
+
+    public static boolean hasPendingReveal(ServerPlayer player) {
         ListTag stored = player.getPersistentData().getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < stored.size(); i++) {
-            ItemStack stack = ItemStack.of(stored.getCompound(i));
-            if (!stack.isEmpty()) {
-                result.add(stack);
-            }
+            CompoundTag entry = stored.getCompound(i);
+            if (!ItemStack.of(entry).isEmpty() && !entry.getBoolean(REVEALED_TAG)) return true;
         }
-        return result;
+        return false;
     }
 
-    /**
-     * Claims as much as the player's inventory accepts. Any remainder stays in storage.
-     */
     public static boolean claim(ServerPlayer player, int index) {
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
-        if (index < 0 || index >= stored.size()) {
-            return false;
-        }
+        if (index < 0 || index >= stored.size()) return false;
 
-        ItemStack storedStack = ItemStack.of(stored.getCompound(index));
+        CompoundTag originalEntry = stored.getCompound(index);
+        if (!originalEntry.getBoolean(REVEALED_TAG)) return false;
+        ItemStack storedStack = ItemStack.of(originalEntry);
         if (storedStack.isEmpty()) {
             stored.remove(index);
             data.put(STORAGE_TAG, stored);
@@ -138,63 +151,22 @@ public final class LootStorage {
 
         ItemStack toInsert = storedStack.copy();
         player.getInventory().add(toInsert);
-
         if (toInsert.isEmpty()) {
             stored.remove(index);
         } else {
             CompoundTag remainder = toInsert.save(new CompoundTag());
-            CompoundTag originalEntry = stored.getCompound(index);
-            String rarity = originalEntry.contains(RARITY_TAG)
-                    ? originalEntry.getString(RARITY_TAG) : LootRarity.COMMON.name();
-            remainder.putString(RARITY_TAG, rarity);
+            remainder.putString(RARITY_TAG, readRarity(originalEntry).name());
+            remainder.putBoolean(REVEALED_TAG, true);
             stored.set(index, remainder);
         }
         data.put(STORAGE_TAG, stored);
         return toInsert.isEmpty();
     }
 
-    /** Claims every pending reward that fits; leftovers remain stored. */
-    public static List<StoredReward> claimAllForReveal(ServerPlayer player) {
-        CompoundTag data = player.getPersistentData();
-        ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
-        List<StoredReward> delivered = new ArrayList<>();
-        for (int i = stored.size() - 1; i >= 0; i--) {
-            ItemStack stack = ItemStack.of(stored.getCompound(i));
-            if (stack.isEmpty()) {
-                stored.remove(i);
-                continue;
-            }
-            CompoundTag entry = stored.getCompound(i);
-            LootRarity rarity = LootRarity.COMMON;
-            if (entry.contains(RARITY_TAG)) {
-                try { rarity = LootRarity.valueOf(entry.getString(RARITY_TAG)); }
-                catch (IllegalArgumentException ignored) { rarity = LootRarity.COMMON; }
-            }
-            ItemStack remaining = stack.copy();
-            player.getInventory().add(remaining);
-            int inserted = stack.getCount() - remaining.getCount();
-            if (inserted > 0) {
-                ItemStack shown = stack.copy();
-                shown.setCount(inserted);
-                delivered.add(0, new StoredReward(shown, rarity));
-            }
-            if (remaining.isEmpty()) stored.remove(i);
-            else {
-                CompoundTag updated = remaining.save(new CompoundTag());
-                updated.putString(RARITY_TAG, rarity.name());
-                stored.set(i, updated);
-            }
-        }
-        data.put(STORAGE_TAG, stored);
-        return delivered;
-    }
-
     public static boolean discard(ServerPlayer player, int index) {
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
-        if (index < 0 || index >= stored.size()) {
-            return false;
-        }
+        if (index < 0 || index >= stored.size()) return false;
         stored.remove(index);
         data.put(STORAGE_TAG, stored);
         return true;
