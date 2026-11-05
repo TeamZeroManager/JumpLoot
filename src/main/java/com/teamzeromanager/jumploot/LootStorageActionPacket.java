@@ -32,7 +32,12 @@ public final class LootStorageActionPacket {
             if (player == null) return;
             if (packet.action == Action.CLAIM) LootStorage.claim(player, packet.index);
             else if (packet.action == Action.DISCARD) LootStorage.discard(player, packet.index);
-            else LootStorage.claimAll(player);
+            else {
+                java.util.List<LootStorage.StoredReward> claimed = LootStorage.claimAllForReveal(player);
+                JumpNetwork.sendStorage(player, LootStorage.getContents(player));
+                if (!claimed.isEmpty()) JumpNetwork.sendRewardBatch(player, claimed);
+                return;
+            }
             JumpNetwork.sendStorage(player, LootStorage.getContents(player));
         });
         context.setPacketHandled(true);
