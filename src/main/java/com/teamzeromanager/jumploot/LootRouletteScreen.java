@@ -11,15 +11,15 @@ import java.util.List;
 
 /** Simultaneous multi-reward gacha reveal. */
 public final class LootRouletteScreen extends Screen {
-    private enum Phase { WAITING, RESULT }
+    private enum Phase { RARITY, ITEM, RESULT }
 
-    // The first seconds keep both the rarity color and item hidden.
-    // Both reveal effects run together for exactly five seconds (100 ticks).
-    private static final int REVEAL_TICKS = 100;
+    // 2.5 seconds to reveal rarity, then 2.5 seconds to reveal the item.
+    private static final int RARITY_TICKS = 50;
+    private static final int ITEM_TICKS = 50;
 
     private final List<LootStorage.StoredReward> rewards = new ArrayList<>();
     private final List<List<Particle>> particles = new ArrayList<>();
-    private Phase phase = Phase.WAITING;
+    private Phase phase = Phase.RARITY;
     private int ticks;
 
     private static final class Particle {
@@ -54,7 +54,10 @@ public final class LootRouletteScreen extends Screen {
         super.tick();
         ticks++;
 
-        if (phase == Phase.WAITING && ticks >= REVEAL_TICKS) {
+        if (phase == Phase.RARITY && ticks >= RARITY_TICKS) {
+            phase = Phase.ITEM;
+            ticks = 0;
+        } else if (phase == Phase.ITEM && ticks >= ITEM_TICKS) {
             phase = Phase.RESULT;
             ticks = 0;
         }
@@ -108,15 +111,15 @@ public final class LootRouletteScreen extends Screen {
             int centerY = y + cellHeight / 2 - 4;
 
             // Keep the card neutral until the rarity reveal phase actually begins.
-            boolean rarityVisible = phase == Phase.RESULT;
+            boolean rarityVisible = phase != Phase.RARITY;
             int cardColor = rarityVisible ? color(rarityColor, 55) : 0xff302a37;
             graphics.fill(x, y, x + cellWidth - 5, y + cellHeight - 5, 0xff15111c);
             graphics.fill(x + 1, y + 1, x + cellWidth - 6, y + cellHeight - 6, cardColor);
 
             String heading;
             int headingColor;
-            if (phase == Phase.WAITING) {
-                heading = "PREPARANDO...";
+            if (phase == Phase.RARITY) {
+                heading = "REVELANDO RAREZA...";
                 headingColor = 0xffbdb4c9;
             } else {
                 heading = reward.rarity().name();
@@ -124,10 +127,8 @@ public final class LootRouletteScreen extends Screen {
             }
             graphics.drawCenteredString(font, fitText(heading, cellWidth - 12), centerX, y + 6, headingColor);
 
-            if (phase != Phase.RESULT) {
-                float progress;
-                progress = phase == Phase.WAITING
-                        ? Math.min(1f, ticks / (float) REVEAL_TICKS) : 1f;
+            if (phase == Phase.RARITY) {
+                float progress = Math.min(1f, ticks / (float) RARITY_TICKS);
 
                 for (Particle particle : particles.get(i)) {
                     float particleProgress = Math.max(0,
@@ -142,6 +143,13 @@ public final class LootRouletteScreen extends Screen {
                             color(particleColor, (int) (230 * particleProgress)));
                 }
 
+            } else if (phase == Phase.ITEM) {
+                // Rarity remains visible; the item itself is revealed during the second half.
+                graphics.renderItem(stack, centerX - 8, centerY - 12);
+                graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
+                        centerX, y + cellHeight - 31, 0xffffffff);
+                graphics.drawCenteredString(font, "x" + stack.getCount(),
+                        centerX, y + cellHeight - 19, rarityColor);
             } else {
                 graphics.renderItem(stack, centerX - 8, centerY - 12);
                 graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
@@ -154,14 +162,14 @@ public final class LootRouletteScreen extends Screen {
 
         String footer;
         int footerColor;
-        if (phase == Phase.WAITING) {
-            footer = "Preparando la revelación...";
+        if (phase == Phase.RARITY) {
+            footer = "Revelando rareza · 2,5 s";
             footerColor = 0xffbdb4c9;
         } else if (phase == Phase.RESULT) {
             footer = "¡RECOMPENSAS OBTENIDAS!";
             footerColor = 0xffffd45a;
         } else {
-            footer = "Revelación simultánea";
+            footer = "Revelando recompensa · 2,5 s";
             footerColor = 0xffbdb4c9;
         }
         graphics.drawCenteredString(font, fitText(footer, panelWidth - 24),
