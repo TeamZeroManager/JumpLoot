@@ -49,7 +49,7 @@ public final class LootRewardService {
         ItemStack reward = result.item();
 
         // Save first on the server so closing the reveal screen cannot lose the reward.
-        LootStorage.add(player, reward);
+        LootStorage.add(player, reward, result.rarity());
         JumpLoot.LOGGER.info("Generated and stored Jump Loot reward for {}: {} ({}) [high rarity guarantee: {}]",
                 player.getGameProfile().getName(),
                 net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(reward.getItem()),
