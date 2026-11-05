@@ -35,7 +35,8 @@ public final class RewardReadyPacket {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                 () -> () -> Minecraft.getInstance().setScreen(
-                        new LootRouletteScreen(packet.rarity, packet.item))));
+                        new LootRouletteScreen(java.util.Collections.singletonList(
+                                new LootStorage.StoredReward(packet.item, packet.rarity))))));
         context.setPacketHandled(true);
     }
 }
