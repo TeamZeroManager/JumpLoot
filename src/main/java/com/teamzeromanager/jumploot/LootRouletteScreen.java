@@ -144,12 +144,19 @@ public final class LootRouletteScreen extends Screen {
                 }
 
             } else if (phase == Phase.ITEM) {
-                // Rarity remains visible; the item itself is revealed during the second half.
-                graphics.renderItem(stack, centerX - 8, centerY - 12);
-                graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
-                        centerX, y + cellHeight - 31, 0xffffffff);
-                graphics.drawCenteredString(font, "x" + stack.getCount(),
-                        centerX, y + cellHeight - 19, rarityColor);
+                // The rarity is now known; keep the item hidden while its 2.5-second reveal animation plays.
+                float progress = Math.min(1f, ticks / (float) ITEM_TICKS);
+                for (Particle particle : particles.get(i)) {
+                    float particleProgress = Math.max(0,
+                            Math.min(1, (progress - particle.delay) / (1 - particle.delay)));
+                    float radius = particle.radius * (1 - particleProgress * .88f);
+                    float angle = particle.angle + ticks * .08f * particle.speed;
+                    int particleX = centerX + (int) (Math.cos(angle) * radius);
+                    int particleY = centerY + (int) (Math.sin(angle) * radius * .65f);
+                    graphics.fill(particleX, particleY,
+                            particleX + particle.size, particleY + particle.size,
+                            color(rarityColor, (int) (230 * particleProgress)));
+                }
             } else {
                 graphics.renderItem(stack, centerX - 8, centerY - 12);
                 graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
