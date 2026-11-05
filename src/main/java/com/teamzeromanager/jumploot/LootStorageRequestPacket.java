@@ -14,9 +14,7 @@ public final class LootStorageRequestPacket {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (player != null) {
-                JumpNetwork.sendStorage(player, LootStorage.getContents(player));
-            }
+            if (player != null) JumpNetwork.sendStorage(player, LootStorage.getRewards(player));
         });
         context.setPacketHandled(true);
     }
