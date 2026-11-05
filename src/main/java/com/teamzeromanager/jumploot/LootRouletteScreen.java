@@ -83,12 +83,19 @@ public final class LootRouletteScreen extends Screen {
 
         int columns = count == 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
         int rows = (count + columns - 1) / columns;
-        int cellWidth = Math.min(116, (width - 24) / columns);
-        int cellHeight = Math.min(112, (height - 62) / rows);
-        int panelWidth = columns * cellWidth + 16;
-        int panelHeight = rows * cellHeight + 48;
+        // Reserve room for the title and footer so no text is drawn outside the panel.
+        int panelWidth = Math.min(width - 24, Math.max(300, columns * 132 + 16));
+        int cellWidth = Math.max(1, (panelWidth - 16) / columns);
+        int cellHeight = Math.min(112, Math.max(76, (height - 104) / rows));
+        int panelHeight = rows * cellHeight + 76;
         int left = (width - panelWidth) / 2;
-        int top = (height - panelHeight) / 2;
+        int top = Math.max(8, (height - panelHeight) / 2);
+        // On short screens, shrink the grid rather than letting the panel exceed the viewport.
+        if (top + panelHeight > height - 8) {
+            cellHeight = Math.max(54, (height - 92) / rows);
+            panelHeight = rows * cellHeight + 76;
+            top = Math.max(4, (height - panelHeight) / 2);
+        }
 
         graphics.fill(left, top, left + panelWidth, top + panelHeight, 0xf0100d16);
         graphics.fill(left + 2, top + 2, left + panelWidth - 2, top + panelHeight - 2, 0xf0272231);
@@ -125,7 +132,7 @@ public final class LootRouletteScreen extends Screen {
                 heading = reward.rarity().name();
                 headingColor = rarityColor;
             }
-            graphics.drawCenteredString(font, heading, centerX, y + 6, headingColor);
+            graphics.drawCenteredString(font, fitText(heading, cellWidth - 12), centerX, y + 6, headingColor);
 
             if (phase != Phase.RESULT) {
                 float progress;
@@ -154,12 +161,12 @@ public final class LootRouletteScreen extends Screen {
 
                 if (phase == Phase.ITEM && progress > .55f) {
                     graphics.renderItem(stack, centerX - 8, centerY - 8);
-                    graphics.drawCenteredString(font, stack.getHoverName(),
+                    graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
                             centerX, y + cellHeight - 21, 0xffffffff);
                 }
             } else {
                 graphics.renderItem(stack, centerX - 8, centerY - 12);
-                graphics.drawCenteredString(font, stack.getHoverName(),
+                graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
                         centerX, y + cellHeight - 31, 0xffffffff);
                 graphics.drawCenteredString(font,
                         "x" + stack.getCount() + " · " + reward.rarity().name(),
@@ -176,17 +183,24 @@ public final class LootRouletteScreen extends Screen {
             footer = "¡RECOMPENSAS OBTENIDAS!";
             footerColor = 0xffffd45a;
         } else {
-            footer = "Todas las recompensas se revelan simultáneamente";
+            footer = "Revelación simultánea";
             footerColor = 0xffbdb4c9;
         }
-        graphics.drawCenteredString(font, footer, width / 2, top + panelHeight - 12, footerColor);
+        graphics.drawCenteredString(font, fitText(footer, panelWidth - 24),
+                width / 2, top + panelHeight - (phase == Phase.RESULT ? 29 : 17), footerColor);
 
         if (phase == Phase.RESULT) {
             graphics.drawCenteredString(font, "ENTER o ESC para continuar",
-                    width / 2, Math.min(height - 12, top + panelHeight + 5), 0xffe6e0ee);
+                    width / 2, top + panelHeight - 15, 0xffe6e0ee);
         }
 
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private String fitText(String text, int maxWidth) {
+        if (font.width(text) <= maxWidth) return text;
+        String ellipsis = "...";
+        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width(ellipsis))) + ellipsis;
     }
 
     @Override
