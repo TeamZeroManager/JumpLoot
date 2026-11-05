@@ -142,11 +142,6 @@ public final class LootRouletteScreen extends Screen {
                             color(particleColor, (int) (230 * particleProgress)));
                 }
 
-                if (phase == Phase.WAITING && progress > .55f) {
-                    graphics.renderItem(stack, centerX - 8, centerY - 8);
-                    graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
-                            centerX, y + cellHeight - 21, 0xffffffff);
-                }
             } else {
                 graphics.renderItem(stack, centerX - 8, centerY - 12);
                 graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
