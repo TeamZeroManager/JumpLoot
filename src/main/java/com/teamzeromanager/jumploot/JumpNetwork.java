@@ -71,6 +71,10 @@ public final class JumpNetwork {
         CHANNEL.sendToServer(new LootStorageActionPacket(index, LootStorageActionPacket.Action.CLAIM));
     }
 
+    public static void claimAllStorage() {
+        CHANNEL.sendToServer(new LootStorageActionPacket(0, LootStorageActionPacket.Action.CLAIM_ALL));
+    }
+
     public static void discardStorage(int index) {
         CHANNEL.sendToServer(new LootStorageActionPacket(index, LootStorageActionPacket.Action.DISCARD));
     }
