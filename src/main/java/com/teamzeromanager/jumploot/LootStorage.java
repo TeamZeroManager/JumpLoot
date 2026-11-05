@@ -63,7 +63,9 @@ public final class LootStorage {
             if (moved > 0) {
                 existing.grow(moved);
                 remaining.shrink(moved);
-                stored.set(i, existing.save(new CompoundTag()));
+                CompoundTag merged = existing.save(new CompoundTag());
+                merged.putString(RARITY_TAG, stored.getCompound(i).contains(RARITY_TAG) ? stored.getCompound(i).getString(RARITY_TAG) : rarity.name());
+                stored.set(i, merged);
             }
         }
 
@@ -141,7 +143,7 @@ public final class LootStorage {
     }
 
     /** Claims every pending reward that fits; leftovers remain stored. */
-    public static void claimAll(ServerPlayer player) {
+    public static List<StoredReward> claimAllForReveal(ServerPlayer player) {
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
         List<StoredReward> delivered = new ArrayList<>();
@@ -173,6 +175,7 @@ public final class LootStorage {
             }
         }
         data.put(STORAGE_TAG, stored);
+        return delivered;
     }
 
     public static boolean discard(ServerPlayer player, int index) {
