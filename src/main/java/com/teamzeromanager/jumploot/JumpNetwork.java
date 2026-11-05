@@ -72,8 +72,8 @@ public final class JumpNetwork {
         CHANNEL.sendToServer(new LootStorageRequestPacket());
     }
 
-    public static void sendStorage(ServerPlayer player, List<ItemStack> items) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new LootStorageSyncPacket(items));
+    public static void sendStorage(ServerPlayer player, List<LootStorage.StoredReward> rewards) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new LootStorageSyncPacket(rewards));
     }
 
     public static void claimStorage(int index) {
