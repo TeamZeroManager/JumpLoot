@@ -34,6 +34,11 @@ public final class JumpNetwork {
                 .decoder(RewardReadyPacket::decode)
                 .consumerMainThread(RewardReadyPacket::handle)
                 .add();
+        CHANNEL.messageBuilder(RewardBatchReadyPacket.class, packetId++)
+                .encoder(RewardBatchReadyPacket::encode)
+                .decoder(RewardBatchReadyPacket::decode)
+                .consumerMainThread(RewardBatchReadyPacket::handle)
+                .add();
         CHANNEL.messageBuilder(LootStorageRequestPacket.class, packetId++)
                 .encoder(LootStorageRequestPacket::encode)
                 .decoder(LootStorageRequestPacket::decode)
@@ -57,6 +62,10 @@ public final class JumpNetwork {
 
     public static void sendRewardReady(ServerPlayer player, LootRarity rarity, ItemStack item) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardReadyPacket(rarity, item));
+    }
+
+    public static void sendRewardBatch(ServerPlayer player, List<LootStorage.StoredReward> rewards) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new RewardBatchReadyPacket(rewards));
     }
 
     public static void requestStorage() {
