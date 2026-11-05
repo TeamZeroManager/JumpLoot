@@ -11,12 +11,11 @@ import java.util.List;
 
 /** Simultaneous multi-reward gacha reveal. */
 public final class LootRouletteScreen extends Screen {
-    private enum Phase { WAITING, RARITY, ITEM, RESULT }
+    private enum Phase { WAITING, RESULT }
 
     // The first seconds keep both the rarity color and item hidden.
-    private static final int WAITING_TICKS = 50;
-    private static final int RARITY_TICKS = 110;
-    private static final int ITEM_TICKS = 145;
+    // Both reveal effects run together for exactly five seconds (100 ticks).
+    private static final int REVEAL_TICKS = 100;
 
     private final List<LootStorage.StoredReward> rewards = new ArrayList<>();
     private final List<List<Particle>> particles = new ArrayList<>();
@@ -55,13 +54,7 @@ public final class LootRouletteScreen extends Screen {
         super.tick();
         ticks++;
 
-        if (phase == Phase.WAITING && ticks >= WAITING_TICKS) {
-            phase = Phase.RARITY;
-            ticks = 0;
-        } else if (phase == Phase.RARITY && ticks >= RARITY_TICKS) {
-            phase = Phase.ITEM;
-            ticks = 0;
-        } else if (phase == Phase.ITEM && ticks >= ITEM_TICKS) {
+        if (phase == Phase.WAITING && ticks >= REVEAL_TICKS) {
             phase = Phase.RESULT;
             ticks = 0;
         }
@@ -115,7 +108,7 @@ public final class LootRouletteScreen extends Screen {
             int centerY = y + cellHeight / 2 - 4;
 
             // Keep the card neutral until the rarity reveal phase actually begins.
-            boolean rarityVisible = phase == Phase.RARITY || phase == Phase.ITEM || phase == Phase.RESULT;
+            boolean rarityVisible = phase == Phase.RESULT;
             int cardColor = rarityVisible ? color(rarityColor, 55) : 0xff302a37;
             graphics.fill(x, y, x + cellWidth - 5, y + cellHeight - 5, 0xff15111c);
             graphics.fill(x + 1, y + 1, x + cellWidth - 6, y + cellHeight - 6, cardColor);
@@ -125,9 +118,6 @@ public final class LootRouletteScreen extends Screen {
             if (phase == Phase.WAITING) {
                 heading = "PREPARANDO...";
                 headingColor = 0xffbdb4c9;
-            } else if (phase == Phase.RARITY) {
-                heading = "REVELANDO RAREZA";
-                headingColor = 0xffffd45a;
             } else {
                 heading = reward.rarity().name();
                 headingColor = rarityColor;
@@ -136,13 +126,8 @@ public final class LootRouletteScreen extends Screen {
 
             if (phase != Phase.RESULT) {
                 float progress;
-                if (phase == Phase.WAITING) {
-                    progress = Math.min(1f, ticks / (float) WAITING_TICKS);
-                } else if (phase == Phase.RARITY) {
-                    progress = Math.min(1f, ticks / (float) RARITY_TICKS);
-                } else {
-                    progress = Math.min(1f, ticks / (float) ITEM_TICKS);
-                }
+                progress = phase == Phase.WAITING
+                        ? Math.min(1f, ticks / (float) REVEAL_TICKS) : 1f;
 
                 for (Particle particle : particles.get(i)) {
                     float particleProgress = Math.max(0,
@@ -151,15 +136,13 @@ public final class LootRouletteScreen extends Screen {
                     float angle = particle.angle + ticks * .08f * particle.speed;
                     int particleX = centerX + (int) (Math.cos(angle) * radius);
                     int particleY = centerY + (int) (Math.sin(angle) * radius * .65f);
-                    int particleColor = phase == Phase.WAITING
-                            ? 0xffb9c6d8
-                            : (phase == Phase.RARITY ? 0xffb9c6d8 : rarityColor);
+                    int particleColor = 0xffb9c6d8;
                     graphics.fill(particleX, particleY,
                             particleX + particle.size, particleY + particle.size,
                             color(particleColor, (int) (230 * particleProgress)));
                 }
 
-                if (phase == Phase.ITEM && progress > .55f) {
+                if (phase == Phase.WAITING && progress > .55f) {
                     graphics.renderItem(stack, centerX - 8, centerY - 8);
                     graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
                             centerX, y + cellHeight - 21, 0xffffffff);
