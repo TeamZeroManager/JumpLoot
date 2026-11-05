@@ -12,6 +12,15 @@ import java.util.List;
 /** Persistent, player-owned reward collection. */
 public final class LootStorage {
     private static final String STORAGE_TAG = "jumploot.reward_storage";
+    private static final String RARITY_TAG = "jumploot.rarity";
+
+    public static final class StoredReward {
+        private final ItemStack stack;
+        private final LootRarity rarity;
+        public StoredReward(ItemStack stack, LootRarity rarity) { this.stack = stack.copy(); this.rarity = rarity; }
+        public ItemStack stack() { return stack.copy(); }
+        public LootRarity rarity() { return rarity; }
+    }
 
     private LootStorage() {
     }
@@ -32,7 +41,7 @@ public final class LootStorage {
         }
     }
 
-    public static void add(ServerPlayer player, ItemStack reward) {
+    public static void add(ServerPlayer player, ItemStack reward, LootRarity rarity) {
         if (reward == null || reward.isEmpty()) {
             return;
         }
@@ -63,11 +72,31 @@ public final class LootStorage {
             int amount = Math.min(remaining.getCount(), Math.max(1, remaining.getMaxStackSize()));
             ItemStack part = remaining.copy();
             part.setCount(amount);
-            stored.add(part.save(new CompoundTag()));
+            CompoundTag entry = part.save(new CompoundTag());
+            entry.putString(RARITY_TAG, rarity.name());
+            stored.add(entry);
             remaining.shrink(amount);
         }
 
         data.put(STORAGE_TAG, stored);
+    }
+
+    public static List<StoredReward> getRewards(ServerPlayer player) {
+        List<StoredReward> result = new ArrayList<>();
+        ListTag stored = player.getPersistentData().getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
+        for (int i = 0; i < stored.size(); i++) {
+            CompoundTag entry = stored.getCompound(i);
+            ItemStack stack = ItemStack.of(entry);
+            if (!stack.isEmpty()) {
+                LootRarity rarity = LootRarity.COMMON;
+                if (entry.contains(RARITY_TAG)) {
+                    try { rarity = LootRarity.valueOf(entry.getString(RARITY_TAG)); }
+                    catch (IllegalArgumentException ignored) { rarity = LootRarity.COMMON; }
+                }
+                result.add(new StoredReward(stack, rarity));
+            }
+        }
+        return result;
     }
 
     public static List<ItemStack> getContents(ServerPlayer player) {
@@ -115,16 +144,33 @@ public final class LootStorage {
     public static void claimAll(ServerPlayer player) {
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
+        List<StoredReward> delivered = new ArrayList<>();
         for (int i = stored.size() - 1; i >= 0; i--) {
             ItemStack stack = ItemStack.of(stored.getCompound(i));
             if (stack.isEmpty()) {
                 stored.remove(i);
                 continue;
             }
+            CompoundTag entry = stored.getCompound(i);
+            LootRarity rarity = LootRarity.COMMON;
+            if (entry.contains(RARITY_TAG)) {
+                try { rarity = LootRarity.valueOf(entry.getString(RARITY_TAG)); }
+                catch (IllegalArgumentException ignored) { rarity = LootRarity.COMMON; }
+            }
             ItemStack remaining = stack.copy();
             player.getInventory().add(remaining);
+            int inserted = stack.getCount() - remaining.getCount();
+            if (inserted > 0) {
+                ItemStack shown = stack.copy();
+                shown.setCount(inserted);
+                delivered.add(0, new StoredReward(shown, rarity));
+            }
             if (remaining.isEmpty()) stored.remove(i);
-            else stored.set(i, remaining.save(new CompoundTag()));
+            else {
+                CompoundTag updated = remaining.save(new CompoundTag());
+                updated.putString(RARITY_TAG, rarity.name());
+                stored.set(i, updated);
+            }
         }
         data.put(STORAGE_TAG, stored);
     }
