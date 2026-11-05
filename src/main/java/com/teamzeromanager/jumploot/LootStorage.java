@@ -111,6 +111,24 @@ public final class LootStorage {
         return toInsert.isEmpty();
     }
 
+    /** Claims every pending reward that fits; leftovers remain stored. */
+    public static void claimAll(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
+        for (int i = stored.size() - 1; i >= 0; i--) {
+            ItemStack stack = ItemStack.of(stored.getCompound(i));
+            if (stack.isEmpty()) {
+                stored.remove(i);
+                continue;
+            }
+            ItemStack remaining = stack.copy();
+            player.getInventory().add(remaining);
+            if (remaining.isEmpty()) stored.remove(i);
+            else stored.set(i, remaining.save(new CompoundTag()));
+        }
+        data.put(STORAGE_TAG, stored);
+    }
+
     public static boolean discard(ServerPlayer player, int index) {
         CompoundTag data = player.getPersistentData();
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
