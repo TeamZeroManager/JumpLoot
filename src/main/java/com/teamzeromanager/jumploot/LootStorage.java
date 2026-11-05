@@ -53,7 +53,13 @@ public final class LootStorage {
         // Merge only stacks with identical item and NBT, respecting the live item stack limit.
         for (int i = 0; i < stored.size() && !remaining.isEmpty(); i++) {
             ItemStack existing = ItemStack.of(stored.getCompound(i));
-            if (!ItemStack.isSameItemSameTags(existing, remaining)) {
+            CompoundTag existingEntry = stored.getCompound(i);
+            LootRarity existingRarity = LootRarity.COMMON;
+            if (existingEntry.contains(RARITY_TAG)) {
+                try { existingRarity = LootRarity.valueOf(existingEntry.getString(RARITY_TAG)); }
+                catch (IllegalArgumentException ignored) { existingRarity = LootRarity.COMMON; }
+            }
+            if (!ItemStack.isSameItemSameTags(existing, remaining) || existingRarity != rarity) {
                 continue;
             }
 
@@ -64,7 +70,7 @@ public final class LootStorage {
                 existing.grow(moved);
                 remaining.shrink(moved);
                 CompoundTag merged = existing.save(new CompoundTag());
-                merged.putString(RARITY_TAG, stored.getCompound(i).contains(RARITY_TAG) ? stored.getCompound(i).getString(RARITY_TAG) : rarity.name());
+                merged.putString(RARITY_TAG, rarity.name());
                 stored.set(i, merged);
             }
         }
@@ -136,7 +142,12 @@ public final class LootStorage {
         if (toInsert.isEmpty()) {
             stored.remove(index);
         } else {
-            stored.set(index, toInsert.save(new CompoundTag()));
+            CompoundTag remainder = toInsert.save(new CompoundTag());
+            CompoundTag originalEntry = stored.getCompound(index);
+            String rarity = originalEntry.contains(RARITY_TAG)
+                    ? originalEntry.getString(RARITY_TAG) : LootRarity.COMMON.name();
+            remainder.putString(RARITY_TAG, rarity);
+            stored.set(index, remainder);
         }
         data.put(STORAGE_TAG, stored);
         return toInsert.isEmpty();
