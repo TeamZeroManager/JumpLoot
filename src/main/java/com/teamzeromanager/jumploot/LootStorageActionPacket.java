@@ -7,7 +7,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public final class LootStorageActionPacket {
-    public enum Action { CLAIM, DISCARD }
+    public enum Action { CLAIM, DISCARD, CLAIM_ALL }
     private final int index;
     private final Action action;
 
@@ -31,7 +31,8 @@ public final class LootStorageActionPacket {
             ServerPlayer player = context.getSender();
             if (player == null) return;
             if (packet.action == Action.CLAIM) LootStorage.claim(player, packet.index);
-            else LootStorage.discard(player, packet.index);
+            else if (packet.action == Action.DISCARD) LootStorage.discard(player, packet.index);
+            else LootStorage.claimAll(player);
             JumpNetwork.sendStorage(player, LootStorage.getContents(player));
         });
         context.setPacketHandled(true);
