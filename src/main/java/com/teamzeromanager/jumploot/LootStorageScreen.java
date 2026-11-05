@@ -30,6 +30,10 @@ public final class LootStorageScreen extends Screen {
                 .tooltip(net.minecraft.client.gui.components.Tooltip.create(
                         Component.literal("Ver posibles recompensas")))
                 .build());
+        addRenderableWidget(Button.builder(Component.literal("Reclamar recompensas"), button ->
+                JumpNetwork.claimAllStorage())
+                .bounds(left + 91, top + 190, 148, 18)
+                .build());
     }
 
     public LootStorageScreen(List<ItemStack> contents) {
@@ -95,8 +99,8 @@ public final class LootStorageScreen extends Screen {
 
         String action = selected < 0 ? "ENTER: reclamar   ·   D: descartar" :
                 (confirmDiscard ? "¿Descartar esta recompensa? Pulsa D otra vez" : "ENTER: reclamar   ·   D: descartar");
-        graphics.drawCenteredString(this.font, action, this.width / 2, top + 205, confirmDiscard ? 0xFFFF7777 : 0xFFE6E0EE);
-        graphics.drawCenteredString(this.font, "ESC: cerrar", this.width / 2, top + 218, 0xFFBDB4C9);
+        graphics.drawCenteredString(this.font, action, this.width / 2, top + 212, confirmDiscard ? 0xFFFF7777 : 0xFFE6E0EE);
+        graphics.drawCenteredString(this.font, "ESC: cerrar", this.width / 2, top + 223, 0xFFBDB4C9);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
