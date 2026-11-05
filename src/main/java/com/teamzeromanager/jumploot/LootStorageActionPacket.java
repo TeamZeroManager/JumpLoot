@@ -33,12 +33,12 @@ public final class LootStorageActionPacket {
             if (packet.action == Action.CLAIM) LootStorage.claim(player, packet.index);
             else if (packet.action == Action.DISCARD) LootStorage.discard(player, packet.index);
             else {
-                // Reveal is visual only: every reward remains in the mod collection.
-                java.util.List<LootStorage.StoredReward> pending = LootStorage.getRewards(player);
+                // Reveal only newly generated rewards; repeated requests cannot replay an old batch.
+                java.util.List<LootStorage.StoredReward> pending = LootStorage.revealPending(player);
                 if (!pending.isEmpty()) JumpNetwork.sendRewardBatch(player, pending);
                 return;
             }
-            JumpNetwork.sendStorage(player, LootStorage.getContents(player));
+            JumpNetwork.sendStorage(player, LootStorage.getRewards(player));
         });
         context.setPacketHandled(true);
     }
