@@ -13,9 +13,10 @@ import java.util.List;
 public final class LootRouletteScreen extends Screen {
     private enum Phase { RARITY, ITEM, RESULT }
 
-    // 2.5 seconds to reveal rarity, then 2.5 seconds to reveal the item.
+    // Each reveal stage lasts 2.5 seconds at Minecraft's 20 ticks per second.
     private static final int RARITY_TICKS = 50;
     private static final int ITEM_TICKS = 50;
+    private static final int PANEL_EDGE = 0xffd5a84f;
 
     private final List<LootStorage.StoredReward> rewards = new ArrayList<>();
     private final List<List<Particle>> particles = new ArrayList<>();
@@ -44,7 +45,7 @@ public final class LootRouletteScreen extends Screen {
             rewards.add(new LootStorage.StoredReward(reward.stack(), reward.rarity()));
             RandomSource random = RandomSource.create();
             List<Particle> rewardParticles = new ArrayList<>();
-            for (int i = 0; i < 24; i++) rewardParticles.add(new Particle(random));
+            for (int i = 0; i < 28; i++) rewardParticles.add(new Particle(random));
             particles.add(rewardParticles);
         }
     }
@@ -67,6 +68,56 @@ public final class LootRouletteScreen extends Screen {
         return (Math.max(0, Math.min(255, alpha)) << 24) | (rgb & 0xffffff);
     }
 
+    private float phaseProgress(float partialTick) {
+        if (phase == Phase.RESULT) return 1.0f;
+        int duration = phase == Phase.RARITY ? RARITY_TICKS : ITEM_TICKS;
+        return Math.max(0.0f, Math.min(1.0f, (ticks + partialTick) / duration));
+    }
+
+    private void drawPanelFrame(GuiGraphics graphics, int left, int top, int width, int height,
+                                float partialTick) {
+        float pulse = .5f + .5f * (float) Math.sin((ticks + partialTick) * .12f);
+        int glow = 115 + (int) (65 * pulse);
+        graphics.fill(left, top, left + width, top + height, 0xff0b0910);
+        graphics.fill(left + 2, top + 2, left + width - 2, top + height - 2, 0xff211a2b);
+        graphics.fill(left + 4, top + 4, left + width - 4, top + 29, 0xff15111d);
+        graphics.fill(left, top, left + width, top + 2, color(PANEL_EDGE, glow));
+        graphics.fill(left, top + height - 2, left + width, top + height, 0xff70502d);
+        graphics.fill(left, top, left + 2, top + height, 0xff70502d);
+        graphics.fill(left + width - 2, top, left + width, top + height, 0xff70502d);
+    }
+
+    private void drawParticles(GuiGraphics graphics, int index, int centerX, int centerY,
+                               int particleRgb, float progress, float partialTick) {
+        for (Particle particle : particles.get(index)) {
+            float particleProgress = Math.max(0.0f,
+                    Math.min(1.0f, (progress - particle.delay) / (1.0f - particle.delay)));
+            float radius = particle.radius * (1.0f - particleProgress * .9f);
+            float angle = particle.angle + (ticks + partialTick) * .08f * particle.speed;
+            int particleX = centerX + (int) (Math.cos(angle) * radius);
+            int particleY = centerY + (int) (Math.sin(angle) * radius * .65f);
+            int alpha = (int) (225 * particleProgress);
+            graphics.fill(particleX, particleY,
+                    particleX + particle.size, particleY + particle.size,
+                    color(particleRgb, alpha));
+        }
+    }
+
+    private void drawProgressBar(GuiGraphics graphics, int left, int top, int width,
+                                 float progress, int progressColor) {
+        int barLeft = left + 12;
+        int barRight = left + width - 12;
+        int barWidth = Math.max(0, barRight - barLeft);
+        int fillWidth = Math.round(barWidth * progress);
+        graphics.fill(barLeft, top, barRight, top + 4, 0xff42394a);
+        if (fillWidth > 0) {
+            graphics.fill(barLeft, top, barLeft + fillWidth, top + 4, progressColor);
+            if (fillWidth > 2) {
+                graphics.fill(barLeft, top, barLeft + fillWidth, top + 1, 0x88ffffff);
+            }
+        }
+    }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
@@ -79,26 +130,28 @@ public final class LootRouletteScreen extends Screen {
 
         int columns = count == 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
         int rows = (count + columns - 1) / columns;
-        // Reserve room for the title and footer so no text is drawn outside the panel.
         int panelWidth = Math.min(width - 24, Math.max(300, columns * 132 + 16));
         int cellWidth = Math.max(1, (panelWidth - 16) / columns);
         int cellHeight = Math.min(112, Math.max(76, (height - 104) / rows));
         int panelHeight = rows * cellHeight + 76;
         int left = (width - panelWidth) / 2;
         int top = Math.max(8, (height - panelHeight) / 2);
-        // On short screens, shrink the grid rather than letting the panel exceed the viewport.
         if (top + panelHeight > height - 8) {
             cellHeight = Math.max(54, (height - 92) / rows);
             panelHeight = rows * cellHeight + 76;
             top = Math.max(4, (height - panelHeight) / 2);
         }
 
-        graphics.fill(left, top, left + panelWidth, top + panelHeight, 0xf0100d16);
-        graphics.fill(left + 2, top + 2, left + panelWidth - 2, top + panelHeight - 2, 0xf0272231);
-        graphics.drawCenteredString(font,
-                "✦ JUMP LOOT · " + count + " RECOMPENSA" + (count == 1 ? "" : "S"),
-                width / 2, top + 10, 0xffffd45a);
+        drawPanelFrame(graphics, left, top, panelWidth, panelHeight, partialTick);
 
+        String title = phase == Phase.RARITY ? "✦  REVELANDO RAREZAS  ✦" :
+                phase == Phase.ITEM ? "✦  REVELANDO RECOMPENSAS  ✦" :
+                        "✦  ¡RECOMPENSAS OBTENIDAS!  ✦";
+        graphics.drawCenteredString(font, title, width / 2, top + 10, 0xffffd45a);
+        graphics.drawCenteredString(font, count + (count == 1 ? " recompensa" : " recompensas"),
+                width / 2, top + 21, 0xffbdb4c9);
+
+        float progress = phaseProgress(partialTick);
         for (int i = 0; i < count; i++) {
             LootStorage.StoredReward reward = rewards.get(i);
             ItemStack stack = reward.stack();
@@ -106,60 +159,43 @@ public final class LootRouletteScreen extends Screen {
             int column = i % columns;
             int row = i / columns;
             int x = left + 8 + column * cellWidth;
-            int y = top + 30 + row * cellHeight;
+            int y = top + 34 + row * cellHeight;
+            int cardRight = x + cellWidth - 5;
+            int cardBottom = y + cellHeight - 5;
             int centerX = x + (cellWidth - 5) / 2;
             int centerY = y + cellHeight / 2 - 4;
 
-            // Keep the card neutral until the rarity reveal phase actually begins.
             boolean rarityVisible = phase != Phase.RARITY;
-            int cardColor = rarityVisible ? color(rarityColor, 55) : 0xff302a37;
-            graphics.fill(x, y, x + cellWidth - 5, y + cellHeight - 5, 0xff15111c);
-            graphics.fill(x + 1, y + 1, x + cellWidth - 6, y + cellHeight - 6, cardColor);
+            int edgeColor = rarityVisible ? color(rarityColor, 190) : 0xff51475a;
+            graphics.fill(x, y, cardRight, cardBottom, edgeColor);
+            graphics.fill(x + 1, y + 1, cardRight - 1, cardBottom - 1, 0xff15111c);
+            graphics.fill(x + 3, y + 3, cardRight - 3, cardBottom - 3,
+                    rarityVisible ? color(rarityColor, 34) : 0xff302a37);
 
             String heading;
             int headingColor;
             if (phase == Phase.RARITY) {
-                heading = "REVELANDO RAREZA...";
-                headingColor = 0xffbdb4c9;
+                heading = "ANALIZANDO...";
+                headingColor = 0xffd0c7d8;
             } else {
                 heading = reward.rarity().name();
                 headingColor = rarityColor;
             }
-            graphics.drawCenteredString(font, fitText(heading, cellWidth - 12), centerX, y + 6, headingColor);
+            graphics.drawCenteredString(font, fitText(heading, cellWidth - 16),
+                    centerX, y + 7, headingColor);
 
             if (phase == Phase.RARITY) {
-                float progress = Math.min(1f, ticks / (float) RARITY_TICKS);
-
-                for (Particle particle : particles.get(i)) {
-                    float particleProgress = Math.max(0,
-                            Math.min(1, (progress - particle.delay) / (1 - particle.delay)));
-                    float radius = particle.radius * (1 - particleProgress * .88f);
-                    float angle = particle.angle + ticks * .08f * particle.speed;
-                    int particleX = centerX + (int) (Math.cos(angle) * radius);
-                    int particleY = centerY + (int) (Math.sin(angle) * radius * .65f);
-                    int particleColor = 0xffb9c6d8;
-                    graphics.fill(particleX, particleY,
-                            particleX + particle.size, particleY + particle.size,
-                            color(particleColor, (int) (230 * particleProgress)));
-                }
-
+                drawParticles(graphics, i, centerX, centerY, 0xffc8d5e8, progress, partialTick);
             } else if (phase == Phase.ITEM) {
-                // The rarity is now known; keep the item hidden while its 2.5-second reveal animation plays.
-                float progress = Math.min(1f, ticks / (float) ITEM_TICKS);
-                for (Particle particle : particles.get(i)) {
-                    float particleProgress = Math.max(0,
-                            Math.min(1, (progress - particle.delay) / (1 - particle.delay)));
-                    float radius = particle.radius * (1 - particleProgress * .88f);
-                    float angle = particle.angle + ticks * .08f * particle.speed;
-                    int particleX = centerX + (int) (Math.cos(angle) * radius);
-                    int particleY = centerY + (int) (Math.sin(angle) * radius * .65f);
-                    graphics.fill(particleX, particleY,
-                            particleX + particle.size, particleY + particle.size,
-                            color(rarityColor, (int) (230 * particleProgress)));
-                }
+                drawParticles(graphics, i, centerX, centerY, rarityColor, progress, partialTick);
             } else {
-                graphics.renderItem(stack, centerX - 8, centerY - 12);
-                graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 12),
+                float pop = 1.0f + .08f * (float) Math.sin((ticks + partialTick) * .16f);
+                graphics.pose().pushPose();
+                graphics.pose().translate(centerX, centerY - 3, 0);
+                graphics.pose().scale(pop, pop, 1.0f);
+                graphics.renderItem(stack, -8, -8);
+                graphics.pose().popPose();
+                graphics.drawCenteredString(font, fitText(stack.getHoverName().getString(), cellWidth - 16),
                         centerX, y + cellHeight - 31, 0xffffffff);
                 graphics.drawCenteredString(font,
                         "x" + stack.getCount() + " · " + reward.rarity().name(),
@@ -169,23 +205,24 @@ public final class LootRouletteScreen extends Screen {
 
         String footer;
         int footerColor;
+        int progressColor;
         if (phase == Phase.RARITY) {
-            footer = "Revelando rareza · 2,5 s";
-            footerColor = 0xffbdb4c9;
-        } else if (phase == Phase.RESULT) {
-            footer = "¡RECOMPENSAS OBTENIDAS!";
-            footerColor = 0xffffd45a;
+            footer = "La rareza se revelará en unos instantes";
+            footerColor = 0xffc8c0d2;
+            progressColor = 0xffb9c6d8;
+        } else if (phase == Phase.ITEM) {
+            footer = "La recompensa está a punto de aparecer";
+            footerColor = 0xffc8c0d2;
+            progressColor = rewards.get(0).rarity().getColor();
         } else {
-            footer = "Revelando recompensa · 2,5 s";
-            footerColor = 0xffbdb4c9;
+            footer = "Pulsa ENTER o ESC para continuar";
+            footerColor = 0xffffdf8a;
+            progressColor = 0xffffd45a;
         }
-        graphics.drawCenteredString(font, fitText(footer, panelWidth - 24),
-                width / 2, top + panelHeight - (phase == Phase.RESULT ? 29 : 17), footerColor);
-
-        if (phase == Phase.RESULT) {
-            graphics.drawCenteredString(font, "ENTER o ESC para continuar",
-                    width / 2, top + panelHeight - 15, 0xffe6e0ee);
-        }
+        graphics.drawCenteredString(font, fitText(footer, panelWidth - 28),
+                width / 2, top + panelHeight - 27, footerColor);
+        drawProgressBar(graphics, left, top + panelHeight - 17,
+                panelWidth, progress, progressColor);
 
         super.render(graphics, mouseX, mouseY, partialTick);
     }
