@@ -39,6 +39,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: JumpLoot-Fabric-${{ github.sha }}
-          path: build/libs/*-fabric.jar
+          path: build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
