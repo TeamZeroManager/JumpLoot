@@ -21,7 +21,7 @@ public final class LootRewardService {
             return;
         }
 
-        CompoundTag data = player.getPersistentData();
+        CompoundTag data = PlayerDataStore.get(player);
         int rewardsSinceHighRarity = Math.max(0, data.getInt(REWARDS_SINCE_HIGH_RARITY_TAG));
         boolean guaranteedHighRarity = rewardsSinceHighRarity >= REWARDS_BEFORE_GUARANTEE;
 
