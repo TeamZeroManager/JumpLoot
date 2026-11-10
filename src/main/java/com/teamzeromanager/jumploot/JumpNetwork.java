@@ -92,7 +92,7 @@ public final class JumpNetwork {
         ServerPlayNetworking.send(player, REWARD_READY, buf);
     }
 
-    public static void requestStorage() { ClientPlayNetworking.send(REQUEST_STORAGE, PacketByteBufs.empty()); }
+    public static void requestStorage() { ClientPlayNetworking.send(REQUEST_STORAGE, PacketByteBufs.create()); }
 
     public static void sendStorage(ServerPlayer player, List<LootStorage.StoredReward> rewards) {
         FriendlyByteBuf buf = PacketByteBufs.create();
