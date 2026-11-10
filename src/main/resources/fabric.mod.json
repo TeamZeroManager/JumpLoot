@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "jumploot",
+  "version": "${version}",
+  "name": "Jump Loot",
+  "description": "Earn rewards by jumping, spin for loot, and store your rewards.",
+  "authors": ["TeamZeroManager"],
+  "license": "All Rights Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.teamzeromanager.jumploot.JumpLoot"],
+    "client": ["com.teamzeromanager.jumploot.JumpLootClient"]
+  },
+  "mixins": ["jumploot.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
