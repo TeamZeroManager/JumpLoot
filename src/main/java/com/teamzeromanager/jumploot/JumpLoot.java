@@ -12,7 +12,7 @@ public final class JumpLoot implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        JumpNetwork.register();
+        JumpNetwork.registerServer();
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 JumpCounterHandler.sendCurrentProgress(handler.player));
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
