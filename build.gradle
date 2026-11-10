@@ -19,6 +19,13 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    annotationProcessor "net.fabricmc:sponge-mixin:0.13.3+mixin.0.8.5"
+}
+
+loom {
+    mixin {
+        defaultRefmapName = "jumploot.refmap.json"
+    }
 }
 
 processResources {
