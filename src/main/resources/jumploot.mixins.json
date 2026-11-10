@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "com.teamzeromanager.jumploot.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": ["LivingEntityJumpMixin"],
+  "injectors": {"defaultRequire": 1}
+}
