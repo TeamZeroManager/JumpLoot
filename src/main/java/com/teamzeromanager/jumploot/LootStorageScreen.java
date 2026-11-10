@@ -44,7 +44,7 @@ public final class LootStorageScreen extends Screen {
                         Component.literal("Ver posibles recompensas")))
                 .build());
         revealButton = Button.builder(Component.literal("Reclamar recompensas"), button ->
-                JumpNetwork.claimAllStorage())
+                JumpNetworkClient.claimAllStorage())
                 .bounds(left + 91, top + 190, 148, 18)
                 .build();
         revealButton.active = hasPendingReveal();
@@ -149,11 +149,11 @@ public final class LootStorageScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { onClose(); return true; }
         if (selected >= 0 && selected < items.size() && keyCode == 257) {
-            if (items.get(selected).revealed()) JumpNetwork.claimStorage(selected);
+            if (items.get(selected).revealed()) JumpNetworkClient.claimStorage(selected);
             return true;
         }
         if (selected >= 0 && selected < items.size() && keyCode == 68) {
-            if (confirmDiscard) JumpNetwork.discardStorage(selected);
+            if (confirmDiscard) JumpNetworkClient.discardStorage(selected);
             else confirmDiscard = true;
             return true;
         }
