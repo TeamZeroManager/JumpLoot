@@ -1,19 +1,22 @@
 package com.teamzeromanager.jumploot;
 
-import com.mojang.logging.LogUtils;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayerEvents;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Mod(JumpLoot.MOD_ID)
-public final class JumpLoot {
+public final class JumpLoot implements ModInitializer {
     public static final String MOD_ID = "jumploot";
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public JumpLoot() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientHudConfig.SPEC);
+    @Override
+    public void onInitialize() {
         JumpNetwork.register();
-        LOGGER.info("Jump Loot is loading.");
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                JumpCounterHandler.sendCurrentProgress(handler.player));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                JumpCounterHandler.sendCurrentProgress(newPlayer));
+        LOGGER.info("Jump Loot Fabric is loading.");
     }
 }
