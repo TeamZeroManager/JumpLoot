@@ -1,25 +1,10 @@
 package com.teamzeromanager.jumploot;
 
-import net.minecraftforge.common.ForgeConfigSpec;
-
+/** Lightweight client HUD defaults for the Fabric edition. */
 public final class ClientHudConfig {
-    public static final ForgeConfigSpec SPEC;
-    public static final ForgeConfigSpec.BooleanValue ENABLED;
-    public static final ForgeConfigSpec.BooleanValue SHOW_PERCENT;
-    public static final ForgeConfigSpec.IntValue WIDTH;
-    public static final ForgeConfigSpec.DoubleValue SCALE;
-
-    static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        builder.push("jump_hud");
-        ENABLED = builder.comment("Show the Jump Loot progress HUD").define("enabled", true);
-        SHOW_PERCENT = builder.comment("Show progress percentage").define("show_percent", true);
-        WIDTH = builder.comment("HUD width in pixels").defineInRange("width", 142, 110, 400);
-        SCALE = builder.comment("HUD scale").defineInRange("scale", 1.0D, 0.6D, 2.0D);
-        builder.pop();
-        SPEC = builder.build();
-    }
-
-    private ClientHudConfig() {
-    }
+    public static boolean ENABLED = true;
+    public static boolean SHOW_PERCENT = true;
+    public static int WIDTH = 142;
+    public static double SCALE = 1.0D;
+    private ClientHudConfig() {}
 }
