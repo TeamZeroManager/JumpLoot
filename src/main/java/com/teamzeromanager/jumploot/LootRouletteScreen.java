@@ -236,7 +236,7 @@ public final class LootRouletteScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scanCode, int modifiers) {
         if (phase == Phase.RESULT && (key == 257 || key == 256)) {
-            JumpNetwork.requestStorage();
+            JumpNetworkClient.requestStorage();
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);
