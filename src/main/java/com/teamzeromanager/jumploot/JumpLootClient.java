@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 public final class JumpLootClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        JumpNetworkClient.register();
         HudRenderCallback.EVENT.register((graphics, tickDelta) -> ClientJumpHud.render(graphics));
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) ->
                 InventoryButtonHandler.attach(screen));
