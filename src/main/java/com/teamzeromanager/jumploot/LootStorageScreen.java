@@ -20,17 +20,24 @@ public final class LootStorageScreen extends Screen {
     private int selected = -1;
     private boolean confirmDiscard;
     private Button revealButton;
+    private int animationTicks;
 
     public LootStorageScreen(List<LootStorage.StoredReward> contents) {
         super(Component.literal("Jump Loot - Colección"));
         for (LootStorage.StoredReward reward : contents) {
-            items.add(new LootStorage.StoredReward(reward.stack(), reward.rarity(), reward.revealed()));
+            items.add(new LootStorage.StoredReward(reward.stack(), reward.rarity(), reward.revealed(), reward.special()));
         }
     }
 
     private boolean hasPendingReveal() {
-        for (LootStorage.StoredReward reward : items) if (!reward.revealed()) return true;
+        for (LootStorage.StoredReward reward : items) if (!reward.revealed() || reward.special()) return true;
         return false;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        animationTicks++;
     }
 
     @Override
@@ -65,6 +72,7 @@ public final class LootStorageScreen extends Screen {
 
         int gridLeft = this.width / 2 - GRID_WIDTH / 2;
         int gridTop = top + 52;
+        float pulse = .5f + .5f * (float) Math.sin((animationTicks + partialTick) * .18f);
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLUMNS; col++) {
                 int index = (firstRow + row) * COLUMNS + col;
@@ -78,7 +86,14 @@ public final class LootStorageScreen extends Screen {
                 graphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF302A37);
                 if (occupied) {
                     LootStorage.StoredReward reward = items.get(index);
-                    if (reward.revealed()) {
+                    if (reward.special()) {
+                        int glow = 150 + (int) (90 * pulse);
+                        graphics.fill(x, y, x + 18, y + 18, (glow << 24) | 0x00d5a84f);
+                        graphics.drawCenteredString(this.font, "✦", x + 9, y - 1, 0xFFFFD45A);
+                        graphics.drawCenteredString(this.font, "?", x + 9, y + 5, 0xFFFFE58A);
+                        if (hovered) graphics.renderTooltip(this.font,
+                                Component.literal("✦ Recompensa especial · elige cualquier objeto"), mouseX, mouseY);
+                    } else if (reward.revealed()) {
                         ItemStack stack = reward.stack();
                         graphics.renderItem(stack, x + 1, y + 1);
                         if (stack.getCount() > 1) graphics.renderItemDecorations(this.font, stack, x + 1, y + 1);
@@ -101,7 +116,10 @@ public final class LootStorageScreen extends Screen {
         graphics.fill(left + 9, detailsY, right - 9, detailsY + 34, 0xFF1A1521);
         if (selected >= 0 && selected < items.size()) {
             LootStorage.StoredReward reward = items.get(selected);
-            if (reward.revealed()) {
+            if (reward.special()) {
+                graphics.drawCenteredString(this.font, "✦ RECOMPENSA ESPECIAL ✦", this.width / 2, detailsY + 7, 0xFFFFD45A);
+                graphics.drawCenteredString(this.font, "Reclámala para elegir tu objeto", this.width / 2, detailsY + 19, 0xFFE6E0EE);
+            } else if (reward.revealed()) {
                 ItemStack stack = reward.stack();
                 graphics.renderItem(stack, left + 16, detailsY + 8);
                 graphics.drawString(this.font, stack.getHoverName(), left + 40, detailsY + 7, 0xFFFFFFFF);
@@ -149,7 +167,7 @@ public final class LootStorageScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { onClose(); return true; }
         if (selected >= 0 && selected < items.size() && keyCode == 257) {
-            if (items.get(selected).revealed()) JumpNetworkClient.claimStorage(selected);
+            if (items.get(selected).special() || items.get(selected).revealed()) JumpNetworkClient.claimAllStorage();
             return true;
         }
         if (selected >= 0 && selected < items.size() && keyCode == 68) {
