@@ -66,7 +66,7 @@ public final class LootCatalogScreen extends Screen {
         }
         if (selectionMode) {
             confirmButton = Button.builder(Component.literal("Confirmar elección"), button -> confirmSelection())
-                    .bounds(width / 2 - 65, height / 2 + 78, 130, 20).build();
+                    .bounds(width / 2 - 65, height / 2 + 60, 130, 20).build();
             confirmButton.active = false;
             addRenderableWidget(confirmButton);
         }
@@ -136,8 +136,8 @@ public final class LootCatalogScreen extends Screen {
         if (selectionMode) {
             String status = waitingForServer ? "Guardando elección..." :
                     "Recompensas especiales disponibles: " + remainingSpecials;
-            graphics.drawCenteredString(font, status, cx, top + 164, 0xffffd45a);
-            graphics.drawCenteredString(font, "Selecciona un objeto y confirma", cx, top + 181, 0xffbdb4c9);
+            graphics.drawCenteredString(font, status, cx, top + 151, 0xffffd45a);
+            graphics.drawCenteredString(font, "Selecciona un objeto y confirma", cx, top + 185, 0xffbdb4c9);
         } else {
             graphics.drawCenteredString(font,
                     "Rueda del ratón: explorar objetos  (" + (scrollRow + 1) + "/" + maxRows + ")",
