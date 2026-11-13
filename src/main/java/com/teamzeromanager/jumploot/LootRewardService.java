@@ -7,12 +7,25 @@ import net.minecraft.world.item.ItemStack;
 
 public final class LootRewardService {
     private static final String REWARDS_SINCE_HIGH_RARITY_TAG = "jumploot.rewards_since_high_rarity";
+    private static final String REWARDS_TOWARD_SPECIAL_TAG = "jumploot.rewards_toward_special";
     private static final int REWARDS_BEFORE_GUARANTEE = 5;
+    private static final int REWARDS_BEFORE_SPECIAL = 30;
 
-    private LootRewardService() {
-    }
+    private LootRewardService() {}
 
     public static void award(ServerPlayer player) {
+        CompoundTag data = PlayerDataStore.get(player);
+        int rewardsTowardSpecial = Math.max(0, data.getInt(REWARDS_TOWARD_SPECIAL_TAG));
+        if (rewardsTowardSpecial >= REWARDS_BEFORE_SPECIAL) {
+            LootStorage.addSpecial(player);
+            data.putInt(REWARDS_TOWARD_SPECIAL_TAG, 0);
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "✦ ¡Recompensa especial desbloqueada! Reclámala desde tu colección."), false);
+            JumpLoot.LOGGER.info("Special selectable reward unlocked for {}.",
+                    player.getGameProfile().getName());
+            return;
+        }
+
         LootItemCatalog catalog = LootItemCatalog.build();
         if (catalog.getTotalItemCount() == 0) {
             JumpLoot.LOGGER.error("No eligible items were found for the reward roulette.");
@@ -21,10 +34,8 @@ public final class LootRewardService {
             return;
         }
 
-        CompoundTag data = PlayerDataStore.get(player);
         int rewardsSinceHighRarity = Math.max(0, data.getInt(REWARDS_SINCE_HIGH_RARITY_TAG));
         boolean guaranteedHighRarity = rewardsSinceHighRarity >= REWARDS_BEFORE_GUARANTEE;
-
         LootRewardSelector.Result result;
         try {
             result = guaranteedHighRarity
@@ -37,7 +48,6 @@ public final class LootRewardService {
             return;
         }
 
-        // Advance the guarantee only after a valid reward has actually been selected.
         if (guaranteedHighRarity) {
             data.putInt(REWARDS_SINCE_HIGH_RARITY_TAG, 0);
             player.displayClientMessage(net.minecraft.network.chat.Component.literal(
@@ -46,14 +56,12 @@ public final class LootRewardService {
             data.putInt(REWARDS_SINCE_HIGH_RARITY_TAG, rewardsSinceHighRarity + 1);
         }
 
+        data.putInt(REWARDS_TOWARD_SPECIAL_TAG, rewardsTowardSpecial + 1);
         ItemStack reward = result.item();
-
-        // Save first on the server so closing the reveal screen cannot lose the reward.
         LootStorage.add(player, reward, result.rarity());
         JumpLoot.LOGGER.info("Generated and stored Jump Loot reward for {}: {} ({}) [high rarity guarantee: {}]",
                 player.getGameProfile().getName(),
                 net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(reward.getItem()),
-                result.rarity(),
-                guaranteedHighRarity);
+                result.rarity(), guaranteedHighRarity);
     }
 }
