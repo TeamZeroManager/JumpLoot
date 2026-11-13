@@ -9,7 +9,7 @@ public final class LootRewardService {
     private static final String REWARDS_SINCE_HIGH_RARITY_TAG = "jumploot.rewards_since_high_rarity";
     private static final String REWARDS_TOWARD_SPECIAL_TAG = "jumploot.rewards_toward_special";
     private static final int REWARDS_BEFORE_GUARANTEE = 5;
-    private static final int REWARDS_BEFORE_SPECIAL = 30;
+    private static final int REWARDS_BEFORE_SPECIAL = 10;
 
     private LootRewardService() {}
 
