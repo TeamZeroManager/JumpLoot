@@ -2,9 +2,9 @@ name: Build Jump Loot Fabric
 
 on:
   push:
-    branches: [ "fabric/1.20.1" ]
+    branches: [ "fabric/1.20.1", "testing/special-reward-10-jumps" ]
   pull_request:
-    branches: [ "fabric/1.20.1" ]
+    branches: [ "fabric/1.20.1", "testing/special-reward-10-jumps" ]
   workflow_dispatch:
 
 concurrency:
