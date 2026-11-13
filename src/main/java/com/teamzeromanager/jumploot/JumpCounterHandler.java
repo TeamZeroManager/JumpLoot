@@ -7,9 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class JumpCounterHandler {
     private static final String CURRENT_JUMPS_TAG = "jumploot.current_jumps";
     private static final String NEXT_TARGET_TAG = "jumploot.next_target";
-    private static final int FIRST_TARGET = 30;
-    private static final int TARGET_INCREMENT = 10;
-    private static final int MAX_TARGET = 100;
+    private static final int JUMPS_PER_REWARD = 10;
 
     private JumpCounterHandler() {}
 
@@ -20,7 +18,7 @@ public final class JumpCounterHandler {
         boolean earned = current >= target;
         if (earned) {
             current = 0;
-            target = Math.min(target + TARGET_INCREMENT, MAX_TARGET);
+            target = JUMPS_PER_REWARD;
             data.putInt(NEXT_TARGET_TAG, target);
             player.displayClientMessage(Component.literal(
                     "¡Recompensa conseguida! Próxima meta: " + target + " saltos."), false);
@@ -36,7 +34,7 @@ public final class JumpCounterHandler {
     }
 
     private static int getNextTarget(CompoundTag data) {
-        int target = data.contains(NEXT_TARGET_TAG) ? data.getInt(NEXT_TARGET_TAG) : FIRST_TARGET;
-        return Math.max(FIRST_TARGET, Math.min(target, MAX_TARGET));
+        // Test configuration: every reward requires exactly 10 jumps.
+        return JUMPS_PER_REWARD;
     }
 }
