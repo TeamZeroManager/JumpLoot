@@ -191,6 +191,17 @@ public final class LootStorage {
         return toInsert.isEmpty();
     }
 
+    /** Claims all revealed normal rewards while preserving special and unrevealed entries. */
+    public static void claimAllRevealed(ServerPlayer player) {
+        ListTag stored = PlayerDataStore.get(player).getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
+        for (int i = stored.size() - 1; i >= 0; i--) {
+            CompoundTag entry = stored.getCompound(i);
+            if (entry.getBoolean(REVEALED_TAG) && !entry.getBoolean(SPECIAL_TAG)) {
+                claim(player, i);
+            }
+        }
+    }
+
     public static boolean discard(ServerPlayer player, int index) {
         CompoundTag data = PlayerDataStore.get(player);
         ListTag stored = data.getList(STORAGE_TAG, CompoundTag.TAG_COMPOUND);
