@@ -54,7 +54,7 @@ public final class LootStorageScreen extends Screen {
                 JumpNetworkClient.claimAllStorage())
                 .bounds(left + 91, top + 190, 148, 18)
                 .build();
-        revealButton.active = hasPendingReveal();
+        revealButton.active = !items.isEmpty();
         addRenderableWidget(revealButton);
     }
 
@@ -167,7 +167,9 @@ public final class LootStorageScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { onClose(); return true; }
         if (selected >= 0 && selected < items.size() && keyCode == 257) {
-            if (items.get(selected).special() || items.get(selected).revealed()) JumpNetworkClient.claimAllStorage();
+            LootStorage.StoredReward reward = items.get(selected);
+            if (reward.special() || !reward.revealed()) JumpNetworkClient.claimAllStorage();
+            else JumpNetworkClient.claimStorage(selected);
             return true;
         }
         if (selected >= 0 && selected < items.size() && keyCode == 68) {
