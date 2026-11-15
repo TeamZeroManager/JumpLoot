@@ -39,8 +39,13 @@ public final class JumpNetwork {
                         if (reward.special()) specialCount++;
                         else normal.add(reward);
                     }
-                    if (!normal.isEmpty() || specialCount > 0) sendRewardBatch(player, normal, specialCount);
-                    else sendStorage(player, LootStorage.getRewards(player));
+                    if (!normal.isEmpty() || specialCount > 0) {
+                        sendRewardBatch(player, normal, specialCount);
+                    } else {
+                        // Once everything has been revealed, the same button claims the stored items.
+                        LootStorage.claimAllRevealed(player);
+                        sendStorage(player, LootStorage.getRewards(player));
+                    }
                     return;
                 }
                 sendStorage(player, LootStorage.getRewards(player));
