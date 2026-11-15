@@ -39,8 +39,13 @@ public final class JumpNetwork {
                         if (reward.special()) specialCount++;
                         else normal.add(reward);
                     }
-                    if (!normal.isEmpty() || specialCount > 0) sendRewardBatch(player, normal, specialCount);
-                    else sendStorage(player, LootStorage.getRewards(player));
+                    if (!normal.isEmpty() || specialCount > 0) {
+                        sendRewardBatch(player, normal, specialCount);
+                    } else {
+                        // No pending reveal remains: the existing collection action claims revealed items.
+                        LootStorage.claimAllRevealed(player);
+                        sendStorage(player, LootStorage.getRewards(player));
+                    }
                     return;
                 }
                 sendStorage(player, LootStorage.getRewards(player));
